@@ -56,8 +56,8 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    if not db_user.is_verified:
-        raise HTTPException(status_code=403, detail="Email not verified")
+    # if not db_user.is_verified:
+    #     raise HTTPException(status_code=403, detail="Email not verified")
 
-    token = create_access_token({"sub": db_user.email})
+    token = create_access_token({"client_id": db_user.id})
     return {"access_token": token, "token_type": "bearer"}
