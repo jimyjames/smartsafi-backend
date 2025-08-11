@@ -117,98 +117,98 @@ class WorkerOut(WorkerBase):
         from_attributes = True
 
 
-class ServiceNameBase(BaseModel):
+# class ServiceNameBase(BaseModel):
 
-    name: str
-class ServiceDescriptionBase(BaseModel):
-    title: str
-    description: str
-    service_name_id: int
+#     name: str
+# class ServiceDescriptionBase(BaseModel):
+#     title: str
+#     description: str
+#     service_name_id: int
 
-class ServiceFeatureBase(BaseModel):
-    name: str
-    service_description_id: int
-    icon: Optional[str] = None
+# class ServiceFeatureBase(BaseModel):
+#     name: str
+#     service_description_id: int
+#     icon: Optional[str] = None
 
 
-    @property
-    def price(self):
-        return self.prices[0] if self.prices else None
+#     @property
+#     def price(self):
+#         return self.prices[0] if self.prices else None
 
-class ServicePriceBase(BaseModel):
-    amount: float
-    # unit: Optional[str] = "KES"  # or e.g., "per room", "per item"
-    service_description_id: int
-    service_feature_id: int
-
-# class ServicePriceOut(ServicePriceBase):
+# class ServicePriceBase(BaseModel):
 #     amount: float
-#     unit: Optional[str]
+#     # unit: Optional[str] = "KES"  # or e.g., "per room", "per item"
+#     service_description_id: int
+#     service_feature_id: int
 
-#     class Config:
-#         from_attributes = True
+# # class ServicePriceOut(ServicePriceBase):
+# #     amount: float
+# #     unit: Optional[str]
+
+# #     class Config:
+# #         from_attributes = True
 
 
-# class ServiceFeatureOut(ServiceFeatureBase):
+# # class ServiceFeatureOut(ServiceFeatureBase):
+# #     id: int
+# #     icon: Optional[str]
+# #     prices: Optional[ServicePriceOut]  # Nested price object
+
+# #     class Config:
+# #         from_attributes = True
+# class ServicePriceOut(BaseModel):
 #     id: int
-#     icon: Optional[str]
-#     prices: Optional[ServicePriceOut]  # Nested price object
+#     amount: float
+#     unit: str
 
 #     class Config:
 #         from_attributes = True
-class ServicePriceOut(BaseModel):
-    id: int
-    amount: float
-    unit: str
-
-    class Config:
-        from_attributes = True
 
 
-class ServiceDescriptionSimple(BaseModel):
-    id: int
-    title: str
-    service_name: "ServiceNameSimple"
+# class ServiceDescriptionSimple(BaseModel):
+#     id: int
+#     title: str
+#     service_name: "ServiceNameSimple"
 
-    class Config:
-        from_attributes = True
-
-
-class ServiceNameSimple(BaseModel):
-    id: int
-    name: str
-
-    class Config:
-        from_attributes = True
+#     class Config:
+#         from_attributes = True
 
 
-ServiceDescriptionSimple.update_forward_refs()
+# class ServiceNameSimple(BaseModel):
+#     id: int
+#     name: str
+
+#     class Config:
+#         from_attributes = True
 
 
-class ServiceFeatureOut(BaseModel):
-    id: int
-    name: str
-    icon: Optional[str]
-    prices: List[ServicePriceOut]
-    service_description: ServiceDescriptionSimple
-
-    class Config:
-        from_attributes = True
+# ServiceDescriptionSimple.update_forward_refs()
 
 
-class ServiceDescriptionOut(ServiceDescriptionBase):
-    id: int
-    features: List[ServiceFeatureOut] = []
+# class ServiceFeatureOut(BaseModel):
+#     id: int
+#     name: str
+#     icon: Optional[str]
+#     prices: List[ServicePriceOut]
+#     service_description: ServiceDescriptionSimple
 
-    class Config:
-        from_attributes = True
+#     class Config:
+#         from_attributes = True
 
-class ServiceNameOut(ServiceNameBase):
-    id: int
-    descriptions: List[ServiceDescriptionOut] = []
 
-    class Config:
-        from_attributes = True
+# class ServiceDescriptionOut(ServiceDescriptionBase):
+#     id: int
+#     features: List[ServiceFeatureOut] = []
+
+#     class Config:
+#         from_attributes = True
+
+# class ServiceNameOut(ServiceNameBase):
+#     id: int
+#     descriptions: List[ServiceDescriptionOut] = []
+
+#     class Config:
+#         from_attributes = True
 
 
 # class ServiceFeatureOut(ServiceFeatureBase):
@@ -221,4 +221,66 @@ class ServiceNameOut(ServiceNameBase):
 
 
 ########################################3333
+
+
+
+# ----- Feature Options -----
+class FeatureOptionBase(BaseModel):
+    area_type: str
+    label: str
+    unit_price: float
+    min_units: Optional[int] = 0
+    max_units: Optional[int] = None
+
+
+class FeatureOptionCreate(FeatureOptionBase):
+    pass
+
+
+class FeatureOptionOut(FeatureOptionBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+# ----- Service Feature -----
+class ServiceFeatureBase(BaseModel):
+    slug: str
+    title: str
+    description: Optional[str] = None
+    icon_name: Optional[str] = None
+
+
+class ServiceFeatureCreate(ServiceFeatureBase):
+    category_id: int
+    options: Optional[List[FeatureOptionCreate]] = []
+
+
+class ServiceFeatureOut(ServiceFeatureBase):
+    id: int
+    options: List[FeatureOptionOut]
+
+    class Config:
+        orm_mode = True
+
+
+# ----- Service Category -----
+class ServiceCategoryBase(BaseModel):
+    slug: str
+    title: str
+    description: Optional[str] = None
+    icon_name: Optional[str] = None
+
+
+class ServiceCategoryCreate(ServiceCategoryBase):
+    pass
+
+
+class ServiceCategoryOut(ServiceCategoryBase):
+    id: int
+    features: List[ServiceFeatureOut]
+
+    class Config:
+        orm_mode = True
 

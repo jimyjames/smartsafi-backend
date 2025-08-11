@@ -138,41 +138,29 @@ class Booking(Base):
     worker = relationship("Workers", backref="assigned_bookings")
 
 
-class ServiceName(Base):
-    __tablename__ = "service_names"
+# class ServiceName(Base):
+#     __tablename__ = "service_names"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True, nullable=False)
+#     id = Column(Integer, primary_key=True)
+#     name = Column(String, unique=True, nullable=False)
 
-    descriptions = relationship("ServiceDescription", back_populates="service_name")
-
-
-
-class ServiceDescription(Base):
-    __tablename__ = "service_descriptions"
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String, nullable=False)
-    description = Column(Text)
-    icon = Column(String , nullable=True)
-
-    service_name_id = Column(Integer, ForeignKey("service_names.id"))
-    service_name = relationship("ServiceName", back_populates="descriptions")
-
-    features = relationship("ServiceFeature", back_populates="service_description")
+#     descriptions = relationship("ServiceDescription", back_populates="service_name")
 
 
-class ServiceFeature(Base):
-    __tablename__ = "service_features"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    icon = Column(String)
+# class ServiceDescription(Base):
+#     __tablename__ = "service_descriptions"
 
-    service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
-    service_description = relationship("ServiceDescription", back_populates="features")
+#     id = Column(Integer, primary_key=True)
+#     title = Column(String, nullable=False)
+#     description = Column(Text)
+#     icon = Column(String , nullable=True)
 
-    prices = relationship("ServicePrice", back_populates="service_feature", cascade="all, delete-orphan")
+#     service_name_id = Column(Integer, ForeignKey("service_names.id"))
+#     service_name = relationship("ServiceName", back_populates="descriptions")
+
+#     features = relationship("ServiceFeature", back_populates="service_description")
+
 
 # class ServiceFeature(Base):
 #     __tablename__ = "service_features"
@@ -184,27 +172,21 @@ class ServiceFeature(Base):
 #     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
 #     service_description = relationship("ServiceDescription", back_populates="features")
 
-#     prices = relationship("ServicePrice",
-#                         #    lazy="dynamic",
-#                              cascade="all,delete-orphan",back_populates="service_feature")
+#     prices = relationship("ServicePrice", back_populates="service_feature", cascade="all, delete-orphan")
 
+# # class ServiceFeature(Base):
+# #     __tablename__ = "service_features"
 
-class ServicePrice(Base):
-    __tablename__ = "service_prices"
+# #     id = Column(Integer, primary_key=True)
+# #     name = Column(String, nullable=False)
+# #     icon = Column(String)
 
-    id = Column(Integer, primary_key=True)
-    amount = Column(Float, nullable=False)
-    unit = Column(String, default="KES")
+# #     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
+# #     service_description = relationship("ServiceDescription", back_populates="features")
 
-    service_feature_id = Column(Integer, ForeignKey("service_features.id"))
-    service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
-
-    service_feature = relationship("ServiceFeature", back_populates="prices")
-    service_description = relationship("ServiceDescription")
-
-    __table_args__ = (
-        UniqueConstraint('service_feature_id', 'service_description_id', name='unique_feature_per_description'),
-    )
+# #     prices = relationship("ServicePrice",
+# #                         #    lazy="dynamic",
+# #                              cascade="all,delete-orphan",back_populates="service_feature")
 
 
 # class ServicePrice(Base):
@@ -212,15 +194,76 @@ class ServicePrice(Base):
 
 #     id = Column(Integer, primary_key=True)
 #     amount = Column(Float, nullable=False)
-#     unit = Column(String, default="KES")  # or e.g., "per room", "per item"
+#     unit = Column(String, default="KES")
 
 #     service_feature_id = Column(Integer, ForeignKey("service_features.id"))
 #     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
+
+#     service_feature = relationship("ServiceFeature", back_populates="prices")
+#     service_description = relationship("ServiceDescription")
 
 #     __table_args__ = (
 #         UniqueConstraint('service_feature_id', 'service_description_id', name='unique_feature_per_description'),
 #     )
 
-#     service_feature = relationship("ServiceFeature", back_populates="prices")
-#     service_description = relationship("ServiceDescription")
 
+# # class ServicePrice(Base):
+# #     __tablename__ = "service_prices"
+
+# #     id = Column(Integer, primary_key=True)
+# #     amount = Column(Float, nullable=False)
+# #     unit = Column(String, default="KES")  # or e.g., "per room", "per item"
+
+# #     service_feature_id = Column(Integer, ForeignKey("service_features.id"))
+# #     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
+
+# #     __table_args__ = (
+# #         UniqueConstraint('service_feature_id', 'service_description_id', name='unique_feature_per_description'),
+# #     )
+
+# #     service_feature = relationship("ServiceFeature", back_populates="prices")
+# #     service_description = relationship("ServiceDescription")
+
+
+
+
+
+class ServiceCategory(Base):
+    __tablename__ = "service_categories"
+    id = Column(Integer, primary_key=True, index=True)
+    public_id = Column(String(100), unique=True, default=lambda: "SC" + str(uuid4()))
+    slug = Column(String, unique=True, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    icon_name = Column(String)
+
+    features = relationship("ServiceFeature", back_populates="category", cascade="all, delete")
+
+
+class ServiceFeature(Base):
+    __tablename__ = "service_features"
+    id = Column(Integer, primary_key=True, index=True)
+    public_id = Column(String(100), unique=True, default=lambda: "SF" + str(uuid4()))
+    slug = Column(String, unique=True, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    icon_name = Column(String)
+    category_id = Column(Integer, ForeignKey("service_categories.id"))
+
+    category = relationship("ServiceCategory", back_populates="features")
+    options = relationship("FeatureOption", back_populates="feature", cascade="all, delete")
+
+
+class FeatureOption(Base):
+    __tablename__ = "feature_options"
+    id = Column(Integer, primary_key=True, index=True)
+
+    public_id = Column(String(100), unique=True, default=lambda: "FO" + str(uuid4()))
+    feature_id = Column(Integer, ForeignKey("service_features.id"))
+    area_type = Column(String, nullable=False)  # e.g. bedroom, kitchen
+    label = Column(String, nullable=False)
+    unit_price = Column(Float, nullable=False)
+    min_units = Column(Integer, default=0)
+    max_units = Column(Integer)
+
+    feature = relationship("ServiceFeature", back_populates="options")
