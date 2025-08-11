@@ -7,7 +7,9 @@ from bookings import route as bookings_router
 from authentication.route import auth_router
 from clients.route import router as clients_router
 from workers.route import router as worker_router
-from Services.route import service_router
+# from Services.route import service_router
+from Services.route import router as service_router
+from Services.route import router as s_route
 from payments.route import paymentsrouter
 # Create DB tables
 models.Base.metadata.create_all(bind=engine)
@@ -34,3 +36,4 @@ app.include_router(clients_router)
 app.include_router(worker_router)
 app.include_router(service_router)
 app.include_router(paymentsrouter)
+app.include_router(s_route)
