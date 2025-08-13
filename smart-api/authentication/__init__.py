@@ -5,10 +5,13 @@ from passlib.context import CryptContext
 from fastapi import APIRouter,Depends,HTTPException,status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from functools import wraps
 from database import get_db
 from models import User
 # Load from .env
 from dotenv import load_dotenv
+
+
 load_dotenv()
 
 router = APIRouter()
@@ -55,13 +58,21 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("client_id")
+        email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == email).first()
+    user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
     return user   
+
+
+
+def token_required(func):
+    @wraps(func)
+    async def wrapper(*args, current_user: User = Depends(get_current_user), **kwargs):
+        return await func(*args, current_user=current_user, **kwargs)
+    return wrapper

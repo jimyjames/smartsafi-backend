@@ -165,3 +165,34 @@ def create_feature_option(
     db.commit()
     db.refresh(db_option)
     return db_option
+
+
+@router.get("/features/{category_name}", response_model=List[ServiceFeatureOut])
+def get_features_by_category_name(category_name: str, db: Session = Depends(get_db)):
+    # categories=db.query(ServiceCategory).all()
+    # for category in categories:
+    #     print(category.slug)
+    #     print(category.title)
+    category_name_exists=db.query(ServiceCategory).filter_by(slug=category_name).first()
+#     category_name_exists = (
+#     db.query(ServiceCategory)
+#     .filter(ServiceCategory.slug.like(f"%{category_name}%"))
+#     .first()
+# )
+    if not category_name_exists:
+        raise HTTPException(status_code=404, detail="Category Name does not exist")
+    features = (db.query(ServiceFeature)
+        .filter_by(category_id=category_name_exists.id)
+        .all()
+    )
+    
+
+    if not features:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No features found for category name '{category_name}'"
+        )
+
+    return features
+
+

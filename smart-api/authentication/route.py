@@ -31,7 +31,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     email_token = create_verification_token(new_user.email)
     send_verification_email(new_user.email, email_token)
 
-    access_token = create_access_token({"sub": new_user.email})
+    access_token = create_access_token({"sub": new_user.id})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
