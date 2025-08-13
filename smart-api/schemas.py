@@ -56,45 +56,13 @@ class ClientCreate(ClientBase):
     #     return values
 
 class ClientOut(ClientCreate):
-    client_id: int
+    id: int
     national_id_proof:Optional[str]
     tax_document_proof:Optional[str]
     profile_picture:Optional[str]
 
     class Config:
         from_attributes = True
-
-class BookingBase(BaseModel):
-    client_id: int
-    worker_id: int
-    scheduled_time: datetime  # Time in HH:MM format
-    description: Optional[str] = None
-    service_name: Optional[str] = None
-    property_type: Optional[str] = None
-    instructions: Optional[str] = None
-    location_pin: Optional[str] = None
-    total_price: float
-
-  
-
-class BookingPayment(BaseModel):
-    public_id: str
-    amount: float
-    payment_method: str  # e.g., "credit_card", "paypal"
-
-
-class BookingOut(BookingBase):
-    id: int
-    status: Optional[str] = "pending"  # e.g., "pending", "confirmed", "completed", "cancelled"
-    created_at: datetime  # ISO format date string   
-    updated_at: datetime  # ISO format date string
-    public_id: str
-    total_price: float
-    deposit_paid: float
-    payment_status: str  # e.g., "pending", "paid", "partial", "cancelled"  
-    class Config:
-        from_attributes = True
-
 class WorkerBase(BaseModel):
     first_name: str
     last_name: str
@@ -103,7 +71,7 @@ class WorkerBase(BaseModel):
     user_id: int
 
 class WorkerOut(WorkerBase):
-    worker_id: int
+    id: int
     public_id: str
     profile_picture: Optional[str] = None
     user_id: int
@@ -117,114 +85,49 @@ class WorkerOut(WorkerBase):
         from_attributes = True
 
 
-# class ServiceNameBase(BaseModel):
 
-#     name: str
-# class ServiceDescriptionBase(BaseModel):
-#     title: str
-#     description: str
-#     service_name_id: int
-
-# class ServiceFeatureBase(BaseModel):
-#     name: str
-#     service_description_id: int
-#     icon: Optional[str] = None
+class BookingServiceBase(BaseModel):
+    feature_option_id: int
+    quantity: int
+    unit_price: float
+    total_price: float
 
 
-#     @property
-#     def price(self):
-#         return self.prices[0] if self.prices else None
-
-# class ServicePriceBase(BaseModel):
-#     amount: float
-#     # unit: Optional[str] = "KES"  # or e.g., "per room", "per item"
-#     service_description_id: int
-#     service_feature_id: int
-
-# # class ServicePriceOut(ServicePriceBase):
-# #     amount: float
-# #     unit: Optional[str]
-
-# #     class Config:
-# #         from_attributes = True
-
-
-# # class ServiceFeatureOut(ServiceFeatureBase):
-# #     id: int
-# #     icon: Optional[str]
-# #     prices: Optional[ServicePriceOut]  # Nested price object
-
-# #     class Config:
-# #         from_attributes = True
-# class ServicePriceOut(BaseModel):
-#     id: int
-#     amount: float
-#     unit: str
-
-#     class Config:
-#         from_attributes = True
-
-
-# class ServiceDescriptionSimple(BaseModel):
-#     id: int
-#     title: str
-#     service_name: "ServiceNameSimple"
-
-#     class Config:
-#         from_attributes = True
-
-
-# class ServiceNameSimple(BaseModel):
-#     id: int
-#     name: str
-
-#     class Config:
-#         from_attributes = True
-
-
-# ServiceDescriptionSimple.update_forward_refs()
-
-
-# class ServiceFeatureOut(BaseModel):
-#     id: int
-#     name: str
-#     icon: Optional[str]
-#     prices: List[ServicePriceOut]
-#     service_description: ServiceDescriptionSimple
-
-#     class Config:
-#         from_attributes = True
-
-
-# class ServiceDescriptionOut(ServiceDescriptionBase):
-#     id: int
-#     features: List[ServiceFeatureOut] = []
-
-#     class Config:
-#         from_attributes = True
-
-# class ServiceNameOut(ServiceNameBase):
-#     id: int
-#     descriptions: List[ServiceDescriptionOut] = []
-
-#     class Config:
-#         from_attributes = True
-
-
-# class ServiceFeatureOut(ServiceFeatureBase):
-#     id: int
-#     service_description_id: int
-#     icon: Optional[str] = None
-
-#     class Config:
-#         from_attributes = True
-
-
-########################################3333
+class BookingServiceCreate(BookingServiceBase):
+    pass
 
 
 
-# ----- Feature Options -----
+
+
+# ------------------------------
+# Booking Schemas
+# ------------------------------
+
+class ServiceFeatureBase(BaseModel):
+    slug: str
+    title: str
+    description: Optional[str] = None
+    icon_name: Optional[str] = None
+
+
+class ServiceCategoryBOut(BaseModel):
+   slug: str
+   title: str
+   class Config:
+       from_attributes = True
+
+
+
+
+class BookingServiceFeatureOut(BaseModel):
+    slug: str
+    title: str
+    category: ServiceCategoryBOut
+
+    class Config:
+        from_attributes = True
+
 class FeatureOptionBase(BaseModel):
     area_type: str
     label: str
@@ -239,18 +142,76 @@ class FeatureOptionCreate(FeatureOptionBase):
 
 class FeatureOptionOut(FeatureOptionBase):
     id: int
+    feature: BookingServiceFeatureOut
+    # category: ServiceCategoryBOut
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+class BookingServiceResponse(BookingServiceBase):
+    id: int
+    feature_option: FeatureOptionOut
+
+    class Config:
+        from_attributes = True
+
+class BookingBase(BaseModel):
+    client_id: int
+    worker_id: int
+    appointment_datetime: datetime
+    service_feature_id: int
+    total_price: float
+    deposit_paid: float 
+    status: str 
+    rating: Optional[float] = None
+
+class BookingCreate(BookingBase):
+    booked_services: Optional[List[BookingServiceCreate]]=[]
+
+
+class BookingUpdate(BaseModel):
+    worker_id: Optional[int]
+    appointment_datetime: Optional[datetime]
+    total_price: Optional[float]
+    deposit_paid: Optional[float]
+    status: Optional[str]
+    rating: Optional[float]
+
+class ClientName(BaseModel):
+    id: int
+    first_name: Optional[str]
+    last_name: Optional[str]
+    organization_name: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+class WorkerName(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+
+    class Config:
+        from_attributes = True
+        
+    
+
+class BookingResponse(BookingBase):
+    id: int
+    public_id: str
+    date_of_booking: datetime
+    booked_services: List[BookingServiceResponse]
+    client: ClientName
+    worker: WorkerName 
+    # feature: ServiceFeatureBOut
+
+    class Config:
+        from_attributes = True
+
+
+# ----- Feature Options -----
 
 
 # ----- Service Feature -----
-class ServiceFeatureBase(BaseModel):
-    slug: str
-    title: str
-    description: Optional[str] = None
-    icon_name: Optional[str] = None
-
 
 class ServiceFeatureCreate(ServiceFeatureBase):
     category_id: int
@@ -262,7 +223,7 @@ class ServiceFeatureOut(ServiceFeatureBase):
     options: List[FeatureOptionOut]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ----- Service Category -----
@@ -282,5 +243,5 @@ class ServiceCategoryOut(ServiceCategoryBase):
     features: List[ServiceFeatureOut]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 

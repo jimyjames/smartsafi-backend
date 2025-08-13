@@ -34,7 +34,7 @@ class ClientTypeEnum(str, enum.Enum):
 class Client(Base):
     __tablename__ = "clients"
 
-    client_id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     public_id = Column(
         String(100), unique=True, default=lambda: "Cl" + str(uuid4())
@@ -64,7 +64,7 @@ class Client(Base):
 class Workers(Base):
     __tablename__ = "workers"
 
-    worker_id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     public_id = Column(
         String(100), unique=True, default=lambda: "Wr" + str(uuid4())
@@ -104,126 +104,77 @@ class PaymentStatusEnum(str, enum.Enum):
     cancelled = "cancelled"
 
 # Booking Model
+# class Booking(Base):
+#     __tablename__ = "bookings"
+
+#     id = Column(Integer, primary_key=True, index=True)
+#     public_id = Column(String(100), unique=True, default=lambda: "Bk" + str(uuid4()))
+
+#     client_id = Column(Integer, ForeignKey("clients.client_id"), nullable=False)
+#     worker_id = Column(Integer, ForeignKey("workers.worker_id"), nullable=True)
+
+#     service_name = Column(String, nullable=False, default="Premium Deep Cleaning")
+#     description = Column(Text, nullable=True)
+
+#     property_type = Column(String, nullable=False)
+#     bedrooms = Column(Integer, default=0)
+#     instructions = Column(Text, nullable=True)
+#     created_at = Column(DateTime, default=datetime.utcnow)
+#     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+#     booking_date = Column(DateTime, default=datetime.utcnow)
+#     scheduled_time = Column(DateTime, nullable=False)
+
+#     location_pin = Column(String, nullable=False)
+
+#     total_price = Column(Float, nullable=False)
+#     deposit_paid = Column(Float, default=0.0)
+#     payment_status = Column(String, default="pending", nullable=False)
+
+#     is_online_service = Column(Boolean, default=False)
+
+#     # Relationships
+#     client = relationship("Client", backref="bookings")
+#     worker = relationship("Workers", backref="assigned_bookings")
+
 class Booking(Base):
     __tablename__ = "bookings"
 
     id = Column(Integer, primary_key=True, index=True)
-    public_id = Column(String(100), unique=True, default=lambda: "Bk" + str(uuid4()))
+    public_id = Column(String(100), unique=True, default=lambda: "BK" + str(uuid4()))
 
-    client_id = Column(Integer, ForeignKey("clients.client_id"), nullable=False)
-    worker_id = Column(Integer, ForeignKey("workers.worker_id"), nullable=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True)
 
-    service_name = Column(String, nullable=False, default="Premium Deep Cleaning")
-    description = Column(Text, nullable=True)
+    date_of_booking = Column(DateTime, default=datetime.utcnow)
+    appointment_datetime = Column(DateTime, nullable=False)
 
-    property_type = Column(String, nullable=False)
-    bedrooms = Column(Integer, default=0)
-    instructions = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    booking_date = Column(DateTime, default=datetime.utcnow)
-    scheduled_time = Column(DateTime, nullable=False)
-
-    location_pin = Column(String, nullable=False)
+    service_feature_id = Column(Integer, ForeignKey("service_features.id"), nullable=False)
 
     total_price = Column(Float, nullable=False)
     deposit_paid = Column(Float, default=0.0)
-    payment_status = Column(String, default="pending", nullable=False)
+    status = Column(String, default="pending", nullable=False)  # could use PaymentStatusEnum
+    rating = Column(Float, nullable=True)  # optional customer rating
 
-    is_online_service = Column(Boolean, default=False)
-
-    # Relationships
     client = relationship("Client", backref="bookings")
     worker = relationship("Workers", backref="assigned_bookings")
+    feature = relationship("ServiceFeature", back_populates="bookings")
+    booked_services = relationship("BookingService", back_populates="booking", cascade="all, delete")
 
 
-# class ServiceName(Base):
-#     __tablename__ = "service_names"
+class BookingService(Base):
+    __tablename__ = "booking_services"
 
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String, unique=True, nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=False)
+    feature_option_id = Column(Integer, ForeignKey("feature_options.id"), nullable=False)
 
-#     descriptions = relationship("ServiceDescription", back_populates="service_name")
+    quantity = Column(Integer, default=1, nullable=False)
+    unit_price = Column(Float, nullable=False)
+    total_price = Column(Float, nullable=False)  # quantity * unit_price
 
-
-
-# class ServiceDescription(Base):
-#     __tablename__ = "service_descriptions"
-
-#     id = Column(Integer, primary_key=True)
-#     title = Column(String, nullable=False)
-#     description = Column(Text)
-#     icon = Column(String , nullable=True)
-
-#     service_name_id = Column(Integer, ForeignKey("service_names.id"))
-#     service_name = relationship("ServiceName", back_populates="descriptions")
-
-#     features = relationship("ServiceFeature", back_populates="service_description")
-
-
-# class ServiceFeature(Base):
-#     __tablename__ = "service_features"
-
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String, nullable=False)
-#     icon = Column(String)
-
-#     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
-#     service_description = relationship("ServiceDescription", back_populates="features")
-
-#     prices = relationship("ServicePrice", back_populates="service_feature", cascade="all, delete-orphan")
-
-# # class ServiceFeature(Base):
-# #     __tablename__ = "service_features"
-
-# #     id = Column(Integer, primary_key=True)
-# #     name = Column(String, nullable=False)
-# #     icon = Column(String)
-
-# #     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
-# #     service_description = relationship("ServiceDescription", back_populates="features")
-
-# #     prices = relationship("ServicePrice",
-# #                         #    lazy="dynamic",
-# #                              cascade="all,delete-orphan",back_populates="service_feature")
-
-
-# class ServicePrice(Base):
-#     __tablename__ = "service_prices"
-
-#     id = Column(Integer, primary_key=True)
-#     amount = Column(Float, nullable=False)
-#     unit = Column(String, default="KES")
-
-#     service_feature_id = Column(Integer, ForeignKey("service_features.id"))
-#     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
-
-#     service_feature = relationship("ServiceFeature", back_populates="prices")
-#     service_description = relationship("ServiceDescription")
-
-#     __table_args__ = (
-#         UniqueConstraint('service_feature_id', 'service_description_id', name='unique_feature_per_description'),
-#     )
-
-
-# # class ServicePrice(Base):
-# #     __tablename__ = "service_prices"
-
-# #     id = Column(Integer, primary_key=True)
-# #     amount = Column(Float, nullable=False)
-# #     unit = Column(String, default="KES")  # or e.g., "per room", "per item"
-
-# #     service_feature_id = Column(Integer, ForeignKey("service_features.id"))
-# #     service_description_id = Column(Integer, ForeignKey("service_descriptions.id"))
-
-# #     __table_args__ = (
-# #         UniqueConstraint('service_feature_id', 'service_description_id', name='unique_feature_per_description'),
-# #     )
-
-# #     service_feature = relationship("ServiceFeature", back_populates="prices")
-# #     service_description = relationship("ServiceDescription")
-
+    booking = relationship("Booking", back_populates="booked_services")
+    feature_option = relationship("FeatureOption")
 
 
 
@@ -252,7 +203,7 @@ class ServiceFeature(Base):
 
     category = relationship("ServiceCategory", back_populates="features")
     options = relationship("FeatureOption", back_populates="feature", cascade="all, delete")
-
+    bookings = relationship("Booking", back_populates="feature", cascade="all, delete")
 
 class FeatureOption(Base):
     __tablename__ = "feature_options"
