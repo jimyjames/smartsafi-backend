@@ -161,8 +161,9 @@ class BookingBase(BaseModel):
     service_feature_id: int
     total_price: float
     deposit_paid: float 
+    description:Optional[str] 
     status: str 
-    rating: Optional[float] = None
+    rating: Optional[float] 
 
 class BookingCreate(BookingBase):
     booked_services: Optional[List[BookingServiceCreate]]=[]
@@ -175,6 +176,8 @@ class BookingUpdate(BaseModel):
     deposit_paid: Optional[float]
     status: Optional[str]
     rating: Optional[float]
+    location: Optional[str] 
+    description: Optional[str] 
 
 class ClientName(BaseModel):
     id: int
@@ -245,3 +248,35 @@ class ServiceCategoryOut(ServiceCategoryBase):
     class Config:
         from_attributes = True
 
+
+class BookingRequestBase(BaseModel):
+    client_id: int
+    service_feature_id: int
+    appointment_date: datetime
+    location: str
+    description: Optional[str] = None
+    pricing: Optional[float] = None
+    status: Optional[str] = "pending"
+
+
+class BookingRequestCreate(BookingRequestBase):
+    pass
+
+
+class BookingRequestUpdate(BaseModel):
+    worker_id: Optional[int] = None
+    appointment_date: Optional[datetime] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+    pricing: Optional[float] = None
+    status: Optional[str] = None
+
+
+class BookingRequestResponse(BookingRequestBase):
+    id: int
+    public_id: str
+    worker_id: Optional[int] = None
+    requested_date: datetime
+
+    class Config:
+        orm_mode = True

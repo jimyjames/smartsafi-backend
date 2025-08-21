@@ -1,53 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session,joinedload
-from schemas import  BookingCreate, BookingResponse,BookingServiceResponse,BookingServiceCreate
-from models import Booking,Client,FeatureOption,BookingService,ServiceFeature, ServiceCategory
+from schemas import  BookingCreate, BookingResponse, BookingRequestCreate,BookingRequestUpdate,BookingRequestResponse
+from models import Booking,Client,FeatureOption,BookingService,ServiceFeature, BookingRequest
 from payments.route import lipa_na_mpesa_online
 from database import get_db
+from typing import List, Optional
 
-booking_router = APIRouter(prefix="/bookings", tags=["bookings"])
-
-
-# @booking_router.get("/", response_model=list[BookingOut])
-# def get_bookings(db: Session = Depends(get_db)):
-#     bookings = db.query(Booking).all()
-#     return bookings
-
-# @booking_router.get("/{booking_id}", response_model=BookingOut)
-# def get_booking(booking_id: int, db: Session = Depends(get_db)):
-#     booking = db.query(Booking).filter(Booking.booking_id == booking_id).first()
-#     if not booking:
-#         raise HTTPException(status_code=404, detail="Booking not found")
-#     return booking  
-
-# @booking_router.get("/client/{client_id}", response_model=list[BookingOut])
-# def get_bookings_by_client(client_id: int, db: Session = Depends(get_db)):
-#     bookings = db.query(Booking).filter(Booking.client_id == client_id).all()
-#     if not bookings:
-#         raise HTTPException(status_code=404, detail="No bookings found for this client")
-#     return bookings
-
-# @booking_router.post("/", response_model=BookingOut)
-# def create_booking(booking: BookingBase, db: Session = Depends(get_db)):
-#     db_booking = Booking(**booking.dict())
-#     db.add(db_booking)
-#     db.commit()
-#     db.refresh(db_booking)
-#     # QUERY phone number for client
-#     phone_number = db.query(Client.phone_number).filter(Client.client_id == booking.client_id).first()
-#     print(phone_number)
-#     if not phone_number:
-    
-#         raise HTTPException(status_code=404, detail="Client phone numbernot found")
-#     # Process payment using the phone number and booking total price
-#     try:
-#         lipa_na_mpesa_online(phone=phone_number[0], amount=booking.total_price)
-#         return db_booking
-#     except Exception as e:
-#     # Assuming this function handles payment
-#         raise HTTPException(status_code=500, detail=f"Payment processing failed: {str(e)}")
-    
-    
+booking_router = APIRouter(prefix="/bookings", tags=["bookings"]) 
 
 
 @booking_router.post("/", response_model=BookingResponse)
@@ -129,6 +88,75 @@ def get_bookings_by_client(client_id: int, db: Session = Depends(get_db)):
 
     return bookings
 
+
+@booking_router.put("/{booking_id}", response_model=BookingRequestResponse)
+def update_booking_request(
+    booking_id: int, request: BookingRequestUpdate, db: Session = Depends(get_db)
+):
+    booking = db.query(BookingRequest).filter(BookingRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking request not found")
+
+    for key, value in request.dict(exclude_unset=True).items():
+        setattr(booking, key, value)
+
+    db.commit()
+    db.refresh(booking)
+    return booking
+
+
 @booking_router.get("/stk/" )
 def get_stk_info():
     return lipa_na_mpesa_online(phone="254759234753", amount="10")
+
+@booking_router.post("/requests/", response_model=BookingRequestResponse)
+def create_booking_request(request: BookingRequestCreate, db: Session = Depends(get_db)):
+    booking = BookingRequest(**request.dict())
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+    return booking
+
+
+# ✅ Get all Booking Requests
+@booking_router.get("/requests/", response_model=List[BookingRequestResponse])
+def get_all_booking_requests(db: Session = Depends(get_db)):
+    return db.query(BookingRequest).all()
+
+
+# ✅ Get Booking Request by ID
+@booking_router.get("/requests/{booking_id}", response_model=BookingRequestResponse)
+def get_booking_request(booking_id: int, db: Session = Depends(get_db)):
+    booking = db.query(BookingRequest).filter(BookingRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking request not found")
+    return booking
+
+
+# ✅ Update Booking Request
+@booking_router.put("/requests/{booking_id}", response_model=BookingRequestResponse)
+def update_booking_request(
+    booking_id: int, request: BookingRequestUpdate, db: Session = Depends(get_db)
+):
+    booking = db.query(BookingRequest).filter(BookingRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking request not found")
+
+    for key, value in request.dict(exclude_unset=True).items():
+        setattr(booking, key, value)
+
+    db.commit()
+    db.refresh(booking)
+    return booking
+
+
+# ✅ Delete Booking Request
+@booking_router.delete("/requests/{booking_id}")
+def delete_booking_request(booking_id: int, db: Session = Depends(get_db)):
+    booking = db.query(BookingRequest).filter(BookingRequest.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking request not found")
+
+    db.delete(booking)
+    db.commit()
+    return {"detail": "Booking request deleted"}
