@@ -145,6 +145,8 @@ class Booking(Base):
 
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True)
+    description=Column(String)
+    location = Column(String)
 
     date_of_booking = Column(DateTime, default=datetime.utcnow)
     appointment_datetime = Column(DateTime, nullable=False)
@@ -177,6 +179,27 @@ class BookingService(Base):
     feature_option = relationship("FeatureOption")
 
 
+class BookingRequest(Base):
+    __tablename__ = "booking_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    public_id = Column(String(100), unique=True, default=lambda: "BR" + str(uuid4()))
+
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True)
+
+    service_feature_id = Column(Integer, ForeignKey("service_features.id"), nullable=False)
+
+    requested_date = Column(DateTime, default=datetime.utcnow)
+    appointment_date=Column(DateTime, nullable=False)
+    location = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    pricing = Column(Float)
+    status = Column(String, default="pending", nullable=False)
+
+    client = relationship("Client", backref="booking_requests")
+    worker = relationship("Workers", backref="assigned_booking_requests")
+    feature = relationship("ServiceFeature", back_populates="booking_requests")
 
 
 class ServiceCategory(Base):
@@ -204,6 +227,7 @@ class ServiceFeature(Base):
     category = relationship("ServiceCategory", back_populates="features")
     options = relationship("FeatureOption", back_populates="feature", cascade="all, delete")
     bookings = relationship("Booking", back_populates="feature", cascade="all, delete")
+    booking_requests = relationship("BookingRequest", back_populates="feature", cascade="all, delete")
 
 class FeatureOption(Base):
     __tablename__ = "feature_options"
