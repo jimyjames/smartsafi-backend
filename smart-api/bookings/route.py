@@ -71,7 +71,7 @@ def get_bookings(db: Session = Depends(get_db)):
     return bookings
 
 
-@booking_router.get("/{client_id}", response_model=list[BookingResponse])
+@booking_router.get("/client/{client_id}", response_model=list[BookingResponse])
 def get_bookings_by_client(client_id: int, db: Session = Depends(get_db)):
     client_exists = db.query(Client).filter(Client.id == client_id).first()
     if not client_exists:
@@ -88,14 +88,24 @@ def get_bookings_by_client(client_id: int, db: Session = Depends(get_db)):
 
     return bookings
 
+@booking_router.get("/{booking_id}", response_model=BookingResponse)
+def get_booking(booking_id: int, db: Session = Depends(get_db)):
+    booking = db.query(Booking).options(
+        joinedload(Booking.client),
+        joinedload(Booking.worker),
+        joinedload(Booking.booked_services).joinedload(BookingService.feature_option)
+    ).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    return booking
 
-@booking_router.put("/{booking_id}", response_model=BookingRequestResponse)
+@booking_router.put("/{booking_id}", response_model=BookingResponse)
 def update_booking_request(
     booking_id: int, request: BookingRequestUpdate, db: Session = Depends(get_db)
 ):
-    booking = db.query(BookingRequest).filter(BookingRequest.id == booking_id).first()
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
     if not booking:
-        raise HTTPException(status_code=404, detail="Booking request not found")
+        raise HTTPException(status_code=404, detail="Booking not found")
 
     for key, value in request.dict(exclude_unset=True).items():
         setattr(booking, key, value)
@@ -131,6 +141,17 @@ def get_booking_request(booking_id: int, db: Session = Depends(get_db)):
     if not booking:
         raise HTTPException(status_code=404, detail="Booking request not found")
     return booking
+
+@booking_router.get("/requests/client/{client_id}", response_model=List[BookingRequestResponse])
+def get_booking_requests_by_client(client_id: int, db: Session = Depends(get_db)):
+    client_exists = db.query(Client).filter(Client.id == client_id).first()
+    if not client_exists:
+        raise HTTPException(status_code=404, detail="Client not found")
+    booking_requests_exists = db.query(BookingRequest).filter(BookingRequest.client_id == client_id).all()
+    if not booking_requests_exists:
+        raise HTTPException(status_code=404, detail="No booking requests found for this client")
+
+    return booking_requests_exists
 
 
 # ✅ Update Booking Request
