@@ -162,6 +162,7 @@ class BookingBase(BaseModel):
     total_price: float
     deposit_paid: float 
     description:Optional[str] 
+    location: str
     status: str 
     rating: Optional[float] 
 

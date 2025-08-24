@@ -146,7 +146,7 @@ class Booking(Base):
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     worker_id = Column(Integer, ForeignKey("workers.id"), nullable=True)
     description=Column(String)
-    location = Column(String)
+    location = Column(String,nullable=False)
 
     date_of_booking = Column(DateTime, default=datetime.utcnow)
     appointment_datetime = Column(DateTime, nullable=False)
