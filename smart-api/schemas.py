@@ -171,14 +171,14 @@ class BookingCreate(BookingBase):
 
 
 class BookingUpdate(BaseModel):
-    worker_id: Optional[int]
-    appointment_datetime: Optional[datetime]
-    total_price: Optional[float]
-    deposit_paid: Optional[float]
-    status: Optional[str]
-    rating: Optional[float]
-    location: Optional[str] 
-    description: Optional[str] 
+    worker_id: Optional[int] = None
+    appointment_datetime: Optional[datetime] = None
+    total_price: Optional[float] = None
+    deposit_paid: Optional[float] = None
+    status: Optional[str] = None
+    rating: Optional[float] =  None
+    location: Optional[str] = None
+    description: Optional[str] = None
 
 class ClientName(BaseModel):
     id: int
@@ -230,6 +230,7 @@ class ServiceFeatureOut(ServiceFeatureBase):
         from_attributes = True
 
 
+
 # ----- Service Category -----
 class ServiceCategoryBase(BaseModel):
     slug: str
@@ -258,6 +259,7 @@ class BookingRequestBase(BaseModel):
     description: Optional[str] = None
     pricing: Optional[float] = None
     status: Optional[str] = "pending"
+    worker_id: int
 
 
 class BookingRequestCreate(BookingRequestBase):
@@ -272,12 +274,24 @@ class BookingRequestUpdate(BaseModel):
     pricing: Optional[float] = None
     status: Optional[str] = None
 
+class ServiceFeatureOutBR(BaseModel):
+    id: int
+    title: str
+    slug: str
+    category: ServiceCategoryBOut
+
+    class Config:
+        from_attributes = True
 
 class BookingRequestResponse(BookingRequestBase):
     id: int
     public_id: str
     worker_id: Optional[int] = None
     requested_date: datetime
+    client: ClientName
+    worker: WorkerName
+    feature: ServiceFeatureOutBR
+    
 
     class Config:
         orm_mode = True

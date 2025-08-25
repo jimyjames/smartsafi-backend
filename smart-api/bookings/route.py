@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session,joinedload
-from schemas import  BookingCreate, BookingResponse, BookingRequestCreate,BookingRequestUpdate,BookingRequestResponse
+from schemas import  BookingCreate, BookingResponse, BookingRequestCreate,BookingRequestUpdate,BookingRequestResponse,BookingUpdate,BookingBase
 from models import Booking,Client,FeatureOption,BookingService,ServiceFeature, BookingRequest
 from payments.route import lipa_na_mpesa_online
 from database import get_db
@@ -102,8 +102,8 @@ def get_booking(booking_id: int, db: Session = Depends(get_db)):
     return booking
 
 @booking_router.put("/{booking_id}", response_model=BookingResponse)
-def update_booking_request(
-    booking_id: int, request: BookingRequestUpdate, db: Session = Depends(get_db)
+def update_booking(
+    booking_id: int, request: BookingUpdate, db: Session = Depends(get_db)
 ):
     booking = db.query(Booking).filter(Booking.id == booking_id).first()
     if not booking:
@@ -130,19 +130,19 @@ def create_booking_request(request: BookingRequestCreate, db: Session = Depends(
     return booking
 
 
-# ✅ Get all Booking Requests
-@booking_router.get("/requests/", response_model=List[BookingRequestResponse])
-def get_all_booking_requests(db: Session = Depends(get_db)):
-    return db.query(BookingRequest).all()
+# # ✅ Get all Booking Requests
+# @booking_router.get("/requests/", response_model=List[BookingRequestResponse])
+# def get_all_booking_requests(db: Session = Depends(get_db)):
+#     return db.query(BookingRequest).all()
 
 
-# ✅ Get Booking Request by ID
-@booking_router.get("/requests/{booking_id}", response_model=BookingRequestResponse)
-def get_booking_request(booking_id: int, db: Session = Depends(get_db)):
-    booking = db.query(BookingRequest).filter(BookingRequest.id == booking_id).first()
-    if not booking:
-        raise HTTPException(status_code=404, detail="Booking request not found")
-    return booking
+# # ✅ Get Booking Request by ID
+# @booking_router.get("/requests/{booking_id}", response_model=BookingRequestResponse)
+# def get_booking_request(booking_id: int, db: Session = Depends(get_db)):
+#     booking = db.query(BookingRequest).filter(BookingRequest.id == booking_id).first()
+#     if not booking:
+#         raise HTTPException(status_code=404, detail="Booking request not found")
+#     return booking
 
 @booking_router.get("/requests/client/{client_id}", response_model=List[BookingRequestResponse])
 def get_booking_requests_by_client(client_id: int, db: Session = Depends(get_db)):
@@ -170,6 +170,39 @@ def update_booking_request(
 
     db.commit()
     db.refresh(booking)
+    return booking
+
+
+from sqlalchemy.orm import joinedload
+
+# ✅ Get all booking requests
+@booking_router.get("/requests/", response_model=List[BookingRequestResponse])
+def get_all_booking_requests(db: Session = Depends(get_db)):
+    return (
+        db.query(BookingRequest)
+        .options(
+            joinedload(BookingRequest.client),
+            joinedload(BookingRequest.worker),
+            joinedload(BookingRequest.feature).joinedload(ServiceFeature.category)
+        )
+        .all()
+    )
+
+# ✅ Get booking request by ID
+@booking_router.get("/requests/{booking_id}", response_model=BookingRequestResponse)
+def get_booking_request(booking_id: int, db: Session = Depends(get_db)):
+    booking = (
+        db.query(BookingRequest)
+        .options(
+            joinedload(BookingRequest.client),
+            joinedload(BookingRequest.worker),
+            joinedload(BookingRequest.feature).joinedload(ServiceFeature.category)
+        )
+        .filter(BookingRequest.id == booking_id)
+        .first()
+    )
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking request not found")
     return booking
 
 
