@@ -63,26 +63,201 @@ class ClientOut(ClientCreate):
 
     class Config:
         from_attributes = True
-class WorkerBase(BaseModel):
-    first_name: str
-    last_name: str
-    phone_number: str
-    address: Optional[str] = None
-    user_id: int
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
+from datetime import datetime
 
-class WorkerOut(WorkerBase):
+
+# ==========================
+#  Language
+# ==========================
+class LanguageBase(BaseModel):
+    name: str
+
+class LanguageResponse(LanguageBase):
     id: int
-    public_id: str
-    profile_picture: Optional[str] = None
-    user_id: int
-    good_conduct_proof: Optional[str] = None
-    national_id_number: Optional[int] = None
-    national_id_proof: Optional[str] = None
-    
-
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+
+# ==========================
+#  Worker Emergency Contact
+# ==========================
+class WorkerEmergencyContactBase(BaseModel):
+    name: str
+    phone_number: str
+    relationship_to_worker: Optional[str] = None
+
+class WorkerEmergencyContactCreate(WorkerEmergencyContactBase):
+    pass
+
+class WorkerEmergencyContactResponse(WorkerEmergencyContactBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+# ==========================
+#  Worker Equipment
+# ==========================
+class WorkerEquipmentBase(BaseModel):
+    equipment_name: str
+    has_equipment: bool = True
+    equipment_image: Optional[str] = None
+    equipment_description: Optional[str] = None
+    equipment_status: Optional[str] = None
+
+class WorkerEquipmentCreate(WorkerEquipmentBase):
+    pass
+
+class WorkerEquipmentResponse(WorkerEquipmentBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+# ==========================
+#  Worker Service
+# ==========================
+class WorkerServiceBase(BaseModel):
+    category_id: int
+    experience_years: int = 0
+
+class WorkerServiceCreate(WorkerServiceBase):
+    pass
+
+class WorkerServiceResponse(WorkerServiceBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+# ==========================
+#  Worker Availability
+# ==========================
+class WorkerAvailabilityBase(BaseModel):
+    day_of_week: int
+    start_time: str
+    end_time: str
+
+class WorkerAvailabilityCreate(WorkerAvailabilityBase):
+    pass
+
+class WorkerAvailabilityResponse(WorkerAvailabilityBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+# ==========================
+#  Worker Rating
+# ==========================
+class WorkerRatingBase(BaseModel):
+    rating: float
+    review: Optional[str] = None
+
+class WorkerRatingCreate(WorkerRatingBase):
+    booking_id: Optional[int] = None
+
+class WorkerRatingResponse(WorkerRatingBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# ==========================
+#  Worker Languages
+# ==========================
+class WorkerLanguageBase(BaseModel):
+    language_id: int
+
+class WorkerLanguageCreate(WorkerLanguageBase):
+    pass
+
+class WorkerLanguageResponse(WorkerLanguageBase):
+    id: int
+    language: LanguageResponse
+
+    class Config:
+        orm_mode = True
+
+
+# ==========================
+#  Worker Payments
+# ==========================
+class WorkerPaymentBase(BaseModel):
+    amount: float
+    payment_method: str
+    paid_by: Optional[str] = None
+    payment_reference: Optional[str] = None
+    reference_number: Optional[str] = None
+
+class WorkerPaymentCreate(WorkerPaymentBase):
+    work_done: int   # booking_id
+
+class WorkerPaymentResponse(WorkerPaymentBase):
+    id: int
+    payment_date: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# ==========================
+#  Worker
+# ==========================
+class WorkerBase(BaseModel):
+    worker_type: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    organization_name: Optional[str] = None
+    phone_number: str
+    address: Optional[str] = None
+    profile_picture: Optional[str] = None
+    national_id_number: str
+    national_id_proof: Optional[str] = None
+    good_conduct_number: Optional[str] = None
+    good_conduct_proof: Optional[str] = None
+    good_conduct_issue_date: Optional[datetime] = None
+    good_conduct_expiry_date: Optional[datetime] = None
+    mpesa_number: str
+    bank_name: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+
+class WorkerCreate(WorkerBase):
+    user_id: int
+
+class WorkerUpdate(WorkerBase):
+    pass
+
+class WorkerResponse(WorkerBase):
+    id: int
+    public_id: str
+    average_rating: float
+    jobs_completed: int
+    notifications_enabled: bool
+    chat_enabled: bool
+    agreement_accepted: bool
+
+    emergency_contacts: List[WorkerEmergencyContactResponse] = []
+    equipments: List[WorkerEquipmentResponse] = []
+    services: List[WorkerServiceResponse] = []
+    availabilities: List[WorkerAvailabilityResponse] = []
+    ratings: List[WorkerRatingResponse] = []
+    languages: List[WorkerLanguageResponse] = []
+    # we don’t embed payments by default (usually admin view only)
+
+    class Config:
+        orm_mode = True
+# ------------------------------``
 
 
 

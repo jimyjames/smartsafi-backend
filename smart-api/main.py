@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from database import  engine
-import models
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import models
+
 from  users import route as users_route
 from bookings import route as bookings_router
 from authentication.route import auth_router
@@ -26,6 +28,9 @@ app.add_middleware(
 )
 
 
+
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 

@@ -77,7 +77,7 @@ def register_client_with_files(
     address: Optional[str] = Form(None),
 
     national_id_proof: UploadFile = File(...),
-    tax_document_proof: UploadFile = File(...),
+    tax_document_proof: UploadFile = File(None),
     profile_picture: UploadFile = File(None),
 
     db: Session = Depends(get_db)
