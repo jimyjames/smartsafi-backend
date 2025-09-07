@@ -22,7 +22,10 @@ def create_booking(booking_data: BookingCreate, db: Session = Depends(get_db)):
         total_price=booking_data.total_price,
         deposit_paid=booking_data.deposit_paid,
         status=booking_data.status,
-        rating=booking_data.rating
+        rating=booking_data.rating,
+        special_requests=booking_data.special_requests,
+        preferred_language=booking_data.preferred_language
+
     )
 
     client_exists = db.query(Client).filter(Client.id == booking_data.client_id).first()
