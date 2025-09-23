@@ -13,6 +13,7 @@ from workers.route import router as worker_router
 from Services.route import router as service_router
 from Services.route import router as s_route
 from payments.route import paymentsrouter
+from notifications.route import router as notifications_router
 # Create DB tables
 models.Base.metadata.create_all(bind=engine)
 
@@ -42,3 +43,4 @@ app.include_router(worker_router)
 app.include_router(service_router)
 app.include_router(paymentsrouter)
 app.include_router(s_route)
+app.include_router(notifications_router)
