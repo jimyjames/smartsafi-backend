@@ -22,6 +22,7 @@ class User(Base):
 
     client = relationship("Client", back_populates="user", uselist=False)
     worker = relationship("Workers", back_populates="user", uselist=False)
+    notifications = relationship("Notification", back_populates="user")
 
 
 class ClientTypeEnum(str, enum.Enum):
@@ -353,6 +354,40 @@ class BookingRequest(Base):
     client = relationship("Client", backref="booking_requests")
     worker = relationship("Workers", back_populates="assigned_booking_requests")
     feature = relationship("ServiceFeature", back_populates="booking_requests")
+
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    public_id = Column(String(100), unique=True, default=lambda: "NT" + str(uuid4()))
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="notifications")
+
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    receiver_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=True)  
+    content = Column(Text, nullable=False)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)
+
+    sender = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
+    booking = relationship("Booking", backref="messages")
 
 
 class ServiceCategory(Base):

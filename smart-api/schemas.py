@@ -238,6 +238,26 @@ class WorkerCreate(WorkerBase):
 class WorkerUpdate(WorkerBase):
     pass
 
+
+# --- Notification Schema ---
+
+class NotificationBase(BaseModel):
+    message: str
+    type: str
+
+
+class NotificationCreate(NotificationBase):
+    user_id: int
+
+
+class NotificationResponse(NotificationBase):
+    id: int
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
 class WorkerResponse(WorkerBase):
     id: int
     public_id: str
@@ -253,6 +273,7 @@ class WorkerResponse(WorkerBase):
     availabilities: List[WorkerAvailabilityResponse] = []
     ratings: List[WorkerRatingResponse] = []
     languages: List[WorkerLanguageResponse] = []
+    notifications: List[NotificationResponse] = []
     # we don’t embed payments by default (usually admin view only)
 
     class Config:

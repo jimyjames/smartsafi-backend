@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from uuid import uuid4
 import shutil
@@ -9,18 +9,27 @@ from datetime import datetime
 from database import get_db
 from models import (
     Workers, WorkerEmergencyContact, WorkerEquipment,
-    WorkerService, WorkerAvailability, WorkerRating
+    WorkerService, WorkerAvailability, WorkerRating, Notification, User, WorkerLanguages
 )
 
+from schemas import (
+    WorkerCreate,
+    WorkerUpdate,
+    WorkerResponse
+)
 router = APIRouter(prefix="/workers", tags=["workers"])
+
+
+
 
 UPLOAD_DIR = "uploads/workers"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # ------------------ CREATE WORKER ------------------
-@router.post("/")
-async def create_worker(
+@router.post("")
+# async def create_worker(
+def create_worker(
     db: Session = Depends(get_db),
 
     # --- Worker core ---
@@ -61,7 +70,8 @@ async def create_worker(
     availabilities: Optional[str] = Form(None),  
     # example: '[{"day_of_week":0,"start_time":"08:00","end_time":"17:00"}]'
 ):
-    print("here is availabilities:", availabilities)
+    print("here is availabilities:",)
+    # availabilities)
     import json
 
     # Save files if uploaded
@@ -168,53 +178,36 @@ def add_rating(worker_id: int, rating: float = Form(...), review: Optional[str] 
     return {"message": "Rating added", "average_rating": worker.average_rating}
 
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List
-
-from database import get_db
-from models import Workers
-from schemas import (
-    WorkerCreate,
-    WorkerUpdate,
-    WorkerResponse
-)
-
-router = APIRouter(
-    prefix="/workers",
-    tags=["workers"]
-)
-
 
 # ==========================
 #  Create Worker
 # ==========================
-@router.post("/", response_model=WorkerResponse)
-def create_worker(worker: WorkerCreate, db: Session = Depends(get_db)):
-    db_worker = Workers(
-        user_id=worker.user_id,
-        worker_type=worker.worker_type,
-        first_name=worker.first_name,
-        last_name=worker.last_name,
-        organization_name=worker.organization_name,
-        phone_number=worker.phone_number,
-        address=worker.address,
-        profile_picture=worker.profile_picture,
-        national_id_number=worker.national_id_number,
-        national_id_proof=worker.national_id_proof,
-        good_conduct_number=worker.good_conduct_number,
-        good_conduct_proof=worker.good_conduct_proof,
-        good_conduct_issue_date=worker.good_conduct_issue_date,
-        good_conduct_expiry_date=worker.good_conduct_expiry_date,
-        mpesa_number=worker.mpesa_number,
-        bank_name=worker.bank_name,
-        bank_account_name=worker.bank_account_name,
-        bank_account_number=worker.bank_account_number,
-    )
-    db.add(db_worker)
-    db.commit()
-    db.refresh(db_worker)
-    return db_worker
+# @router.post("/", response_model=WorkerResponse)
+# def create_worker(worker: WorkerCreate, db: Session = Depends(get_db)):
+#     db_worker = Workers(
+#         user_id=worker.user_id,
+#         worker_type=worker.worker_type,
+#         first_name=worker.first_name,
+#         last_name=worker.last_name,
+#         organization_name=worker.organization_name,
+#         phone_number=worker.phone_number,
+#         address=worker.address,
+#         profile_picture=worker.profile_picture,
+#         national_id_number=worker.national_id_number,
+#         national_id_proof=worker.national_id_proof,
+#         good_conduct_number=worker.good_conduct_number,
+#         good_conduct_proof=worker.good_conduct_proof,
+#         good_conduct_issue_date=worker.good_conduct_issue_date,
+#         good_conduct_expiry_date=worker.good_conduct_expiry_date,
+#         mpesa_number=worker.mpesa_number,
+#         bank_name=worker.bank_name,
+#         bank_account_name=worker.bank_account_name,
+#         bank_account_number=worker.bank_account_number,
+#     )
+#     db.add(db_worker)
+#     db.commit()
+#     db.refresh(db_worker)
+#     return db_worker
 
 
 # ==========================
@@ -264,3 +257,28 @@ def delete_worker(worker_id: int, db: Session = Depends(get_db)):
     db.delete(worker)
     db.commit()
     return {"message": "Worker deleted successfully"}
+
+
+
+@router.get("/{worker_id}/full", response_model=WorkerResponse)
+def get_full_worker(worker_id: int, db: Session = Depends(get_db)):
+    worker = (
+        db.query(Workers)
+        .options(
+            joinedload(Workers.emergency_contacts),
+            joinedload(Workers.equipments),
+            joinedload(Workers.services),
+            joinedload(Workers.availabilities),
+            joinedload(Workers.ratings),
+            joinedload(Workers.languages).joinedload(WorkerLanguages.language),
+            joinedload(Workers.user).joinedload(User.notifications).joinedload(Notification.user),
+            # joinedload(User.notifications).joinedload(Notification.user),
+        )
+        .filter(Workers.id == worker_id)
+        .first()
+    )
+
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+
+    return worker
