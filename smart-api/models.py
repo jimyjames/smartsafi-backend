@@ -106,6 +106,8 @@ class Workers(Base):
     good_conduct_issue_date = Column(DateTime, nullable=True)
     good_conduct_expiry_date = Column(DateTime, nullable=True)
     verification_good_conduct = Column(Boolean, default=False)
+    location_pin = Column(String, nullable=True)
+    preferred_language_id = Column(Integer, ForeignKey("languages.id"), nullable=True)
 
     agreement_accepted = Column(Boolean, default=False)
 
