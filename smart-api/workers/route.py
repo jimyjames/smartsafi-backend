@@ -49,6 +49,7 @@ def create_worker(
 
     national_id_number: str = Form(...),
     agreement_accepted: bool = Form(False),
+    location_pin: Optional[str] = Form(None),
 
     profile_picture: Optional[UploadFile] = File(None),
     national_id_proof: Optional[UploadFile] = File(None),
