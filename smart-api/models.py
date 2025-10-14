@@ -98,7 +98,10 @@ class Workers(Base):
 
     # Vetting & Compliance
     national_id_number = Column(String, nullable=False)
-    national_id_proof = Column(String, nullable=True)
+    # national_id_proof = Column(String, nullable=True)
+    national_id_front = Column(String, nullable=True)
+    national_id_back = Column(String, nullable=True)
+
     verification_id = Column(Boolean, default=False)
 
     good_conduct_number = Column(String, nullable=True)
@@ -183,8 +186,8 @@ class WorkerAvailability(Base):
     worker_id = Column(Integer, ForeignKey("workers.id"), nullable=False)
 
     day_of_week = Column(Integer, nullable=False)  # 0=Monday, 6=Sunday
-    start_time = Column(String, nullable=False)    # e.g. "08:00"
-    end_time = Column(String, nullable=False)      # e.g. "17:00"
+    start_time = Column(String, nullable=False, default="06:00")    # e.g. "08:00"
+    end_time = Column(String, nullable=False, default="18:00")      # e.g. "17:00"
 
     worker = relationship("Workers", back_populates="availabilities")
 
@@ -202,7 +205,6 @@ class WorkerRating(Base):
 
     worker = relationship("Workers", back_populates="ratings")
     booking = relationship("Booking")
-
 
 
 class WorkerLanguages(Base):
