@@ -52,7 +52,10 @@ def create_worker(
     location_pin: Optional[str] = Form(None),
 
     profile_picture: Optional[UploadFile] = File(None),
-    national_id_proof: Optional[UploadFile] = File(None),
+    # national_id_proof: Optional[UploadFile] = File(None),
+    national_id_front: Optional[UploadFile] = File(None),
+    national_id_back: Optional[UploadFile] = File(None),
+
     good_conduct_proof: Optional[UploadFile] = File(None),
 
     # --- Emergency contacts (comma separated JSON-like strings) ---
@@ -100,7 +103,9 @@ def create_worker(
         national_id_number=national_id_number,
         agreement_accepted=agreement_accepted,
         profile_picture=save_file(profile_picture, "profile") if profile_picture else None,
-        national_id_proof=save_file(national_id_proof, "id") if national_id_proof else None,
+        # national_id_proof=save_file(national_id_proof, "id") if national_id_proof else None,
+        national_id_front=save_file(national_id_front, "id_front") if national_id_front else None,
+        national_id_back=save_file(national_id_back, "id_back") if national_id_back else None,
         good_conduct_proof=save_file(good_conduct_proof, "good_conduct") if good_conduct_proof else None,
     )
 
@@ -137,15 +142,24 @@ def create_worker(
                 experience_years=s.get("experience_years", 0)
             ))
 
-    if availabilities and availabilities.strip():
+    # if availabilities and availabilities.strip():
+    #     avs = json.loads(availabilities)
+    #     for a in avs:
+    #         db.add(WorkerAvailability(
+    #             worker_id=worker.id,
+    #             day_of_week=a["day_of_week"],
+    #             start_time=a["start_time"],
+    #             end_time=a["end_time"]
+    #         ))
+    if availabilities:
         avs = json.loads(availabilities)
         for a in avs:
             db.add(WorkerAvailability(
                 worker_id=worker.id,
-                day_of_week=a["day_of_week"],
-                start_time=a["start_time"],
-                end_time=a["end_time"]
+                day_of_week=a["day_of_week"]
             ))
+
+
 
     db.commit()
 
