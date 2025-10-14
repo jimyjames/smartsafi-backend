@@ -115,14 +115,30 @@ def create_worker(
 
     # ---------------- Related tables ----------------
     if emergency_contacts:
-        contacts = json.loads(emergency_contacts)
-        for c in contacts:
+        try:
+            contacts = json.loads(emergency_contacts)
+
+            # If a single dict is sent instead of a list
+            if isinstance(contacts, dict):
+                contacts = [contacts]
+
+            for c in contacts:
+                db.add(WorkerEmergencyContact(
+                    worker_id=worker.id,
+                    name=c.get("name"),
+                    phone_number=c.get("phone_number"),
+                    relationship_to_worker=c.get("relationship") or c.get("relationship_to_worker")
+                ))
+
+        except json.JSONDecodeError:
+            # If user accidentally sends raw text fields instead of JSON
             db.add(WorkerEmergencyContact(
                 worker_id=worker.id,
-                name=c["name"],
-                phone_number=c["phone_number"],
-                relationship_to_worker=c.get("relationship_to_worker")
+                name=emergency_contacts,
+                phone_number=None,
+                relationship_to_worker=None
             ))
+
 
     if equipments:
         eqs = json.loads(equipments)
