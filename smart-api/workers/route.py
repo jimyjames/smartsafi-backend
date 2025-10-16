@@ -15,7 +15,8 @@ from models import (
 from schemas import (
     WorkerCreate,
     WorkerUpdate,
-    WorkerResponse
+    WorkerResponse,
+    WorkerEmergencyContactCreate,WorkerEquipmentCreate
 )
 router = APIRouter(prefix="/workers", tags=["workers"])
 
@@ -313,3 +314,69 @@ def get_full_worker(worker_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Worker not found")
 
     return worker
+
+    ##### Worker equipments #####
+
+#UPLOAD_DIR = "static/equipment_images"
+
+@router.post("/{worker_id}/equipments", response_model=dict)
+def add_worker_equipment(
+    worker_id: int,
+    equipment_name: str = Form(...),
+    has_equipment: bool = Form(True),
+    equipment_description: str = Form(None),
+    equipment_status: str = Form(None),
+    equipment_image: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    worker = db.query(Workers).filter(Workers.id == worker_id).first()
+    if equipment_name is None or equipment_name.strip() == "":
+        raise HTTPException(status_code=400, detail="Equipment name is required")
+    if equipment_status is None or equipment_status.strip() == "":
+        raise HTTPException(status_code=400, detail="Equipment status is required")
+    if has_equipment is None:
+        raise HTTPException(status_code=400, detail="has_equipment field is required")
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    
+
+    image_path = None
+    if equipment_image:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        filename = f"{uuid4()}_{equipment_image.filename}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(equipment_image.file, buffer)
+        image_path = file_path
+
+    db_equipment = WorkerEquipment(
+        worker_id=worker.id,
+        equipment_name=equipment_name,
+        has_equipment=has_equipment,
+        equipment_description=equipment_description,
+        equipment_status=equipment_status,
+        equipment_image=image_path
+    )
+
+    db.add(db_equipment)
+    db.commit()
+    db.refresh(db_equipment)
+
+    return {
+        "message": "Equipment added successfully",
+        "equipment": {
+            "id": db_equipment.id,
+            "equipment_name": db_equipment.equipment_name,
+            "equipment_image": db_equipment.equipment_image,
+            "equipment_status": db_equipment.equipment_status
+        }
+    }
+    
+@router.delete("/equipments/{equipment_id}", status_code=204)
+def delete_worker_equipment(equipment_id: int, db: Session = Depends(get_db)):
+    equipment = db.query(WorkerEquipment).filter(WorkerEquipment.id == equipment_id).first()
+    if not equipment:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    db.delete(equipment)
+    db.commit()
+    return {"message": "Equipment deleted successfully"}

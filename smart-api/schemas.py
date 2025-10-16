@@ -5,7 +5,7 @@ from pydantic import BaseModel, field_validator
 from typing import Optional, Literal
 from datetime import datetime
 from uuid import uuid4
-
+from fastapi import Form, UploadFile, File
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -109,8 +109,22 @@ class WorkerEquipmentBase(BaseModel):
     equipment_description: Optional[str] = None
     equipment_status: Optional[str] = None
 
-class WorkerEquipmentCreate(WorkerEquipmentBase):
-    pass
+
+
+class WorkerEquipmentCreate:
+    def __init__(
+        self,
+        equipment_name: str = Form(...),
+        has_equipment: bool = Form(True),
+        equipment_description: Optional[str] = Form(None),
+        equipment_status: Optional[str] = Form(None),
+        equipment_image: Optional[UploadFile] = File(None),
+    ):
+        self.equipment_name = equipment_name
+        self.has_equipment = has_equipment
+        self.equipment_description = equipment_description
+        self.equipment_status = equipment_status
+        self.equipment_image = equipment_image
 
 class WorkerEquipmentResponse(WorkerEquipmentBase):
     id: int
@@ -140,7 +154,7 @@ class WorkerServiceResponse(WorkerServiceBase):
 #  Worker Availability
 # ==========================
 class WorkerAvailabilityBase(BaseModel):
-    day_of_week: int
+    day_of_week: str
     start_time: str
     end_time: str
 
@@ -234,6 +248,9 @@ class WorkerBase(BaseModel):
 
 class WorkerCreate(WorkerBase):
     user_id: int
+    agreement_accepted: bool
+    chat_policy_accepted: bool
+    chat_policy_accepted: bool
 
 class WorkerUpdate(WorkerBase):
     pass
