@@ -89,8 +89,8 @@ class Workers(Base):
     organization_id = Column(Integer, ForeignKey("workers.id"), nullable=True)  
 
     # Personal Info
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
     organization_name = Column(String, nullable=True)
     phone_number = Column(String, nullable=False)
     address = Column(Text, nullable=True)
