@@ -250,8 +250,7 @@ class WorkerCreate(WorkerBase):
     user_id: int
     agreement_accepted: bool
     chat_policy_accepted: bool
-    chat_policy_accepted: bool
-
+    organization_id: Optional[int] = None
 class WorkerUpdate(WorkerBase):
     pass
 

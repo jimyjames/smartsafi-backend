@@ -36,11 +36,11 @@ def create_worker(
     # --- Worker core ---
     user_id: int = Form(...),
     worker_type: str = Form(..., description="individual | organization"),
-    first_name: str = Form(...),
+    first_name: Optional[str] = Form(None),
     organization_name: Optional[str] = Form(None),
     organization_id: Optional[int] = Form(None),
-    last_name: str = Form(...),
-    phone_number: str = Form(...),
+    last_name: Optional[str] = Form(None),
+    phone_number: str= Form(...),
     address: Optional[str] = Form(None),
     mpesa_number: str = Form(...),
 
@@ -77,6 +77,27 @@ def create_worker(
 ):
     print("here is availabilities:",)
     # availabilities)
+
+    if worker_type not in ["individual", "organization"]:
+        raise HTTPException(status_code=400, detail="Invalid worker type")
+    if worker_type == "individual" and (not first_name or not last_name):
+        raise HTTPException(status_code=400, detail="First and last names are required for individual workers")
+    if worker_type == "organization" and (not organization_name or not organization_id):
+        raise HTTPException(status_code=400, detail="Organization name and ID are required for organization workers")
+    if not agreement_accepted:
+        raise HTTPException(status_code=400, detail="You must accept the agreement to proceed")
+    if not mpesa_number:
+        raise HTTPException(status_code=400, detail="Mpesa number is required")
+    if not phone_number:
+        raise HTTPException(status_code=400, detail="Phone number is required")
+    if not national_id_number:
+        raise HTTPException(status_code=400, detail="National ID number is required")
+    if not location_pin:
+        raise HTTPException(status_code=400, detail="Location pin is required")
+    if db.query(Workers).filter(Workers.user_id == user_id).first():
+        raise HTTPException(status_code=403, detail="Worker profile already exists for this user")
+    
+
     import json
 
     # Save files if uploaded
