@@ -97,7 +97,7 @@ class Workers(Base):
     profile_picture = Column(String, nullable=True)
 
     # Vetting & Compliance
-    national_id_number = Column(String, nullable=False)
+    national_id_number = Column(String, nullable=True)
     # national_id_proof = Column(String, nullable=True)
     national_id_front = Column(String, nullable=True)
     national_id_back = Column(String, nullable=True)
@@ -109,6 +109,9 @@ class Workers(Base):
     good_conduct_issue_date = Column(DateTime, nullable=True)
     good_conduct_expiry_date = Column(DateTime, nullable=True)
     verification_good_conduct = Column(Boolean, default=False)
+    company_registration_number = Column(String, nullable=True)
+    company_registration_proof = Column(String, nullable=True)
+    verification_company_registration = Column(Boolean, default=False)
     location_pin = Column(String, nullable=True)
     preferred_language_id = Column(Integer, ForeignKey("languages.id"), nullable=True)
 
