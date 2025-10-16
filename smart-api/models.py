@@ -126,6 +126,7 @@ class Workers(Base):
 
     notifications_enabled = Column(Boolean, default=True)
     chat_enabled = Column(Boolean, default=True)
+    chat_policy_accepted = Column(Boolean, default=False)
 
     # Relationships
     user = relationship("User", back_populates="worker")
