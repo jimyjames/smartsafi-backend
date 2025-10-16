@@ -82,7 +82,7 @@ def create_worker(
         raise HTTPException(status_code=400, detail="Invalid worker type")
     if worker_type == "individual" and (not first_name or not last_name):
         raise HTTPException(status_code=400, detail="First and last names are required for individual workers")
-    if worker_type == "organization" and (not organization_name or not organization_id):
+    if worker_type == "organization" and (not organization_name ):
         raise HTTPException(status_code=400, detail="Organization name and ID are required for organization workers")
     if not agreement_accepted:
         raise HTTPException(status_code=400, detail="You must accept the agreement to proceed")
