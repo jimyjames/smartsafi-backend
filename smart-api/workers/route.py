@@ -43,6 +43,7 @@ def create_worker(
     phone_number: str= Form(...),
     address: Optional[str] = Form(None),
     mpesa_number: str = Form(...),
+    company_hotline_number: Optional[str] = Form(None),
 
     bank_name: Optional[str] = Form(None),
     bank_account_name: Optional[str] = Form(None),
@@ -83,8 +84,8 @@ def create_worker(
         raise HTTPException(status_code=400, detail="Invalid worker type")
     if worker_type == "individual" and (not first_name or not last_name or not national_id_number):
         raise HTTPException(status_code=400, detail="First and last names are required for individual workers")
-    if worker_type == "organization" and (not organization_name or not company_registration_number):
-        raise HTTPException(status_code=400, detail="Organization name and company registration number is required for organization workers")
+    if worker_type == "organization" and (not organization_name or not company_registration_number or not company_hotline_number):
+        raise HTTPException(status_code=400, detail="Organization name, company registration number, and company hotline number are required for worker organization ")
     if not agreement_accepted:
         raise HTTPException(status_code=400, detail="You must accept the agreement to proceed")
     if not mpesa_number:
