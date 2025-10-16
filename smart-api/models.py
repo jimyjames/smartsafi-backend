@@ -111,8 +111,10 @@ class Workers(Base):
     verification_good_conduct = Column(Boolean, default=False)
     company_registration_number = Column(String, nullable=True)
     company_registration_proof = Column(String, nullable=True)
+    company_hotline_number = Column(String, nullable=True)
     verification_company_registration = Column(Boolean, default=False)
     location_pin = Column(String, nullable=True)
+
     preferred_language_id = Column(Integer, ForeignKey("languages.id"), nullable=True)
 
     agreement_accepted = Column(Boolean, default=False)
