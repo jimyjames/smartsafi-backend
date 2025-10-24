@@ -313,7 +313,7 @@ def delete_worker(worker_id: int, db: Session = Depends(get_db)):
 
 
 
-@router.get("/{worker_id}/full", response_model=WorkerResponse)
+@router.get("/{worker_id}", response_model=WorkerResponse)
 def get_full_worker(worker_id: int, db: Session = Depends(get_db)):
     worker = (
         db.query(Workers)
