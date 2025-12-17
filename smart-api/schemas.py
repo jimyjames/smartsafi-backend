@@ -1,8 +1,7 @@
 from pydantic import BaseModel, EmailStr, validator
 from enum import Enum
-from typing import Optional, List
-from pydantic import BaseModel, field_validator
-from typing import Optional, Literal
+from typing import Optional, List,Dict,Literal
+from pydantic import BaseModel, field_validator,EmailStr
 from datetime import datetime
 from uuid import uuid4
 from fastapi import Form, UploadFile, File
@@ -63,9 +62,6 @@ class ClientOut(ClientCreate):
 
     class Config:
         from_attributes = True
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
-from datetime import datetime
 
 
 # ==========================
@@ -178,6 +174,14 @@ class WorkerRatingBase(BaseModel):
 class WorkerRatingCreate(WorkerRatingBase):
     booking_id: Optional[int] = None
 
+
+class WorkerReviewStatsResponse(BaseModel):
+    totalReviews: int
+    averageRating: float
+    responseRate: int
+    ratingBreakdown: Dict[int, int]
+
+
 class WorkerRatingResponse(WorkerRatingBase):
     id: int
     created_at: datetime
@@ -269,10 +273,19 @@ class NotificationCreate(NotificationBase):
 class NotificationResponse(NotificationBase):
     id: int
     is_read: bool
+    title: str
     created_at: datetime
 
     class Config:
         orm_mode = True
+
+class Jobstats(BaseModel):
+    total_jobs: Optional[int] = 1
+    completed_jobs: Optional[int] = 1
+    pending_jobs: Optional[int] = 1
+    cancelled_jobs: Optional[int] = 1
+    rejected_jobs: Optional[int] = 1
+    accepted_jobs: Optional[int] = 1
 
 class WorkerResponse(WorkerBase):
     id: int
@@ -290,10 +303,12 @@ class WorkerResponse(WorkerBase):
     ratings: List[WorkerRatingResponse] = []
     languages: List[WorkerLanguageResponse] = []
     notifications: List[NotificationResponse] = []
+    job_stats: Jobstats |None = None
     # we don’t embed payments by default (usually admin view only)
 
     class Config:
         orm_mode = True
+        from_attributes = True
 # ------------------------------``
 
 
@@ -507,3 +522,18 @@ class BookingRequestResponse(BookingRequestBase):
 
     class Config:
         orm_mode = True
+
+
+class PaymentCreateResponse(BaseModel):
+    client_secret: str
+    payment_intent_id: str
+    amount: float
+    currency: str
+
+class PaymentWebhookResponse(BaseModel):
+    status: str
+    payment_intent_id: str
+
+    class Config:
+        orm_mode = True
+

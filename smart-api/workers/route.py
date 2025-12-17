@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
+from sqlalchemy import func
 from uuid import uuid4
 import shutil
 import os
@@ -9,14 +10,20 @@ from datetime import datetime
 from database import get_db
 from models import (
     Workers, WorkerEmergencyContact, WorkerEquipment,
-    WorkerService, WorkerAvailability, WorkerRating, Notification, User, WorkerLanguages
+    WorkerService, WorkerAvailability, WorkerRating, Notification, User, WorkerLanguages,Booking
 )
 
+from bookings.route import get_worker_job_counts,get_worker_bookings
+from notifications.route import get_worker_notifications
+
 from schemas import (
+    NotificationResponse,
     WorkerCreate,
     WorkerUpdate,
     WorkerResponse,
-    WorkerEmergencyContactCreate,WorkerEquipmentCreate
+    WorkerEmergencyContactCreate,WorkerEquipmentCreate,
+    WorkerRatingResponse,
+    WorkerReviewStatsResponse
 )
 router = APIRouter(prefix="/workers", tags=["workers"])
 
@@ -274,12 +281,12 @@ def list_workers(db: Session = Depends(get_db)):
 # ==========================
 #  Get Worker by ID
 # ==========================
-@router.get("/{worker_id}", response_model=WorkerResponse)
-def get_worker(worker_id: int, db: Session = Depends(get_db)):
-    worker = db.query(Workers).filter(Workers.id == worker_id).first()
-    if not worker:
-        raise HTTPException(status_code=404, detail="Worker not found")
-    return worker
+# @router.get("/{worker_id}", response_model=WorkerResponse)
+# def get_worker(worker_id: int, db: Session = Depends(get_db)):
+#     worker = db.query(Workers).filter(Workers.id == worker_id).first()
+#     if not worker:
+#         raise HTTPException(status_code=404, detail="Worker not found")
+#     return worker
 
 
 # ==========================
@@ -333,8 +340,21 @@ def get_full_worker(worker_id: int, db: Session = Depends(get_db)):
 
     if not worker:
         raise HTTPException(status_code=404, detail="Worker not found")
+    
+    # Get job stats
+    job_stats = get_worker_job_counts(worker_id, db)
+    worker.job_stats = job_stats
 
     return worker
+
+
+## get worker jobs ##
+
+@router.get("/{worker_id}/jobs")
+def grouped_worker_jobs(worker_id: int, db: Session = Depends(get_db)):
+    print("Fetching jobs for worker:", worker_id)
+    return get_worker_bookings(worker_id, db)
+
 
     ##### Worker equipments #####
 
@@ -401,3 +421,89 @@ def delete_worker_equipment(equipment_id: int, db: Session = Depends(get_db)):
     db.delete(equipment)
     db.commit()
     return {"message": "Equipment deleted successfully"}
+
+
+@router.get("/{worker_id}/reviews", response_model=List[WorkerRatingResponse])
+def get_worker_reviews(worker_id: int, db: Session = Depends(get_db)):
+    worker = db.query(Workers).filter(Workers.id == worker_id).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    reviews= db.query(WorkerRating).filter(WorkerRating.worker_id == worker_id).all()
+    return reviews
+    
+
+@router.get(
+    "/{worker_id}/review-stats",
+    response_model=WorkerReviewStatsResponse
+)
+def get_worker_review_stats(
+    worker_id: int,
+    db: Session = Depends(get_db)
+):
+    # Ensure worker exists
+    worker = db.query(Workers).filter(Workers.id == worker_id).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+
+    # Total reviews
+    total_reviews = (
+        db.query(func.count(WorkerRating.id))
+        .filter(WorkerRating.worker_id == worker_id)
+        .scalar()
+    )
+
+    if total_reviews == 0:
+        return {
+            "totalReviews": 0,
+            "averageRating": 0.0,
+            "responseRate": 0,
+            "ratingBreakdown": {5: 0, 4: 0, 3: 0, 2: 0, 1: 0},
+        }
+
+    # Average rating
+    average_rating = (
+        db.query(func.avg(WorkerRating.rating))
+        .filter(WorkerRating.worker_id == worker_id)
+        .scalar()
+    )
+
+    # Rating breakdown
+    breakdown_raw = (
+        db.query(
+            WorkerRating.rating,
+            func.count(WorkerRating.rating)
+        )
+        .filter(WorkerRating.worker_id == worker_id)
+        .group_by(WorkerRating.rating)
+        .all()
+    )
+
+    rating_breakdown = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
+    for rating, count in breakdown_raw:
+        rating_breakdown[int(rating)] = count
+
+    # Response rate (example logic)
+    # Adjust if you have `responded_at` or similar field
+    response_rate = 95  # placeholder / business rule
+
+    return {
+        "totalReviews": total_reviews,
+        "averageRating": round(float(average_rating), 1),
+        "responseRate": response_rate,
+        "ratingBreakdown": rating_breakdown,
+    }
+
+
+@router.get("/{worker_id}/notifications", response_model=List[NotificationResponse])
+def get_worker_notifications(worker_id: int, db: Session = Depends(get_db)):
+    worker = db.query(Workers).filter(Workers.id == worker_id).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+
+    notifications = (db.query(Booking).filter(Booking.worker_id == worker_id, Booking.status == "pending").all())
+    return notifications
+
+@router.get("/{worker_id}/notifications/", response_model=List[NotificationResponse])
+def notifications_getter(worker_id: int, db: Session = Depends(get_db)):
+    return get_worker_notifications(worker_id, db)
+ 

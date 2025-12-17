@@ -1,12 +1,15 @@
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session,joinedload
+from sqlalchemy import func
 from schemas import  BookingCreate, BookingResponse, BookingRequestCreate,BookingRequestUpdate,BookingRequestResponse,BookingUpdate,BookingBase
-from models import Booking,Client,FeatureOption,BookingService,ServiceFeature, BookingRequest
+from models import Booking,Client,FeatureOption,BookingService,ServiceFeature, BookingRequest,Workers, Notification
 from payments.route import lipa_na_mpesa_online
 from database import get_db
 from typing import List, Optional
 
 booking_router = APIRouter(prefix="/bookings", tags=["bookings"]) 
+jobs_router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 @booking_router.post("/", response_model=BookingResponse)
@@ -23,8 +26,8 @@ def create_booking(booking_data: BookingCreate, db: Session = Depends(get_db)):
         deposit_paid=booking_data.deposit_paid,
         status=booking_data.status,
         rating=booking_data.rating,
-        special_requests=booking_data.special_requests,
-        preferred_language=booking_data.preferred_language
+        # special_requests=booking_data.special_requests,
+        # preferred_language=booking_data.preferred_language
 
     )
 
@@ -55,6 +58,22 @@ def create_booking(booking_data: BookingCreate, db: Session = Depends(get_db)):
         db.add(booking_service)
 
     db.commit()
+
+    if worker_exists:
+        notification = Notification(
+            user_id=worker_exists.user_id,   # IMPORTANT: user_id, not worker_exists.id
+            title="New Booking Request",
+            message=(
+                f"You have a new booking scheduled for "
+                f"{new_booking.appointment_datetime.strftime('%d %b %Y, %I:%M %p')}."
+            ),
+            is_read=False,
+            created_at=datetime.utcnow(),
+        )
+        db.add(notification)
+
+    
+    
     db.refresh(new_booking)
     return new_booking
 
@@ -219,3 +238,59 @@ def delete_booking_request(booking_id: int, db: Session = Depends(get_db)):
     db.delete(booking)
     db.commit()
     return {"detail": "Booking request deleted"}
+
+
+#### from here on we have routes to obtain bookings but from a workers perspective ####
+
+
+
+#### ge all workers bookings and categorize them based on their status ####
+
+def get_worker_bookings(worker_id: int, db: Session = Depends(get_db)):
+    # 1. Verify worker exists
+    worker_exists = db.query(Workers).filter(Workers.id == worker_id).first()
+    if not worker_exists:
+        raise HTTPException(status_code=404, detail="Worker not found")
+
+    # 2. Fetch all worker bookings with joins
+    bookings = db.query(Booking).options(
+        joinedload(Booking.client),
+        joinedload(Booking.worker),
+        joinedload(Booking.booked_services).joinedload(BookingService.feature_option)
+    ).filter(Booking.worker_id == worker_id).all()
+
+    # 3. Group the bookings by status
+    grouped = {
+        "pending": [],
+        "accepted": [],
+        "in_progress": [],
+        "completed": [],
+        "cancelled": []
+    }
+
+    for booking in bookings:
+        grouped[booking.status].append(booking) 
+    return grouped
+def get_worker_job_counts( worker_id: int,db: Session = Depends(get_db)):
+    results = (
+        db.query(Booking.status, func.count(Booking.id))
+        .filter(Booking.worker_id == worker_id)
+        .group_by(Booking.status)
+        .all()
+    )
+
+    # default values
+    counts = {
+        "pending": 0,
+        "accepted": 0,
+        "in_progress": 0,
+        "completed": 0,
+        "cancelled": 0,
+    }
+
+    # fill real values
+    for status, count in results:
+        counts[status] = count
+
+    return counts
+

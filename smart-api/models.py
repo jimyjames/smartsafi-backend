@@ -316,6 +316,7 @@ class Booking(Base):
     review = Column(Text, nullable=True)  # optional customer review
     preferred_worker_language = Column(Integer, ForeignKey('languages.id'), nullable=True)
     special_requests = Column(Text, nullable=True)
+    payment_status = Column(String, default="pending", nullable=False)
 
 
     # deposit_payment = relationship("WorkerPayments", foreign_keys=[deposit_payment])
@@ -326,6 +327,8 @@ class Booking(Base):
     worker = relationship("Workers", back_populates="assigned_bookings")
     feature = relationship("ServiceFeature", back_populates="bookings")
     booked_services = relationship("BookingService", back_populates="booking", cascade="all, delete")
+    payments = relationship("Payment", back_populates="booking")
+    notifications = relationship("Notification", back_populates="booking")
 
 
 class BookingService(Base):
@@ -367,6 +370,23 @@ class BookingRequest(Base):
 
 
 
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=False)
+    amount = Column(Float, nullable=False)              # amount in currency units (e.g., 150.0)
+    currency = Column(String(10), default="kes")
+    type = Column(String(20), nullable=False)           # "deposit" or "balance" or "refund"
+    status = Column(String(20), nullable=False)         # pending, succeeded, failed, refunded
+    stripe_payment_intent = Column(String(255), nullable=True)
+    stripe_payment_method = Column(String(255), nullable=True)
+    stripe_charge_id = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    booking = relationship("Booking", back_populates="payments")
+
+
 class Notification(Base):
     __tablename__ = "notifications"
 
@@ -378,8 +398,10 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=True)  
 
     user = relationship("User", back_populates="notifications")
+    booking = relationship("Booking", back_populates="notifications")
 
 
 

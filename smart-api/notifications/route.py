@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Notification, User
+from models import Notification, User, Workers
 from schemas import NotificationResponse, NotificationCreate
 from typing import List
 from datetime import datetime
@@ -78,3 +78,12 @@ def delete_notification(notification_id: int, db: Session = Depends(get_db)):
     db.delete(notification)
     db.commit()
     return {"detail": "Notification deleted successfully"}
+
+
+def get_worker_notifications(worker_id: int, db: Session = Depends(get_db)):
+    worker = db.query(Workers).filter(Workers.id == worker_id).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+
+    notifications = db.query(Notification).filter(Notification.user_id == worker.user_id, Notification.is_read == False).all()
+    return notifications
