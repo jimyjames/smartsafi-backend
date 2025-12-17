@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session,joinedload
 from sqlalchemy import func
 from schemas import  BookingCreate, BookingResponse, BookingRequestCreate,BookingRequestUpdate,BookingRequestResponse,BookingUpdate,BookingBase
 from models import Booking,Client,FeatureOption,BookingService,ServiceFeature, BookingRequest,Workers, Notification
-from payments.route import lipa_na_mpesa_online
+from payments.route import lipa_na_mpesa_online,create_deposit_payment_intent
+from payments import deposit_payment_intent
 from database import get_db
 from typing import List, Optional
 
@@ -12,9 +13,95 @@ booking_router = APIRouter(prefix="/bookings", tags=["bookings"])
 jobs_router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
+# @booking_router.post("/", response_model=BookingResponse)
+# def create_booking(booking_data: BookingCreate, db: Session = Depends(get_db)):
+#     # Create the booking
+#     new_booking = Booking(
+#         client_id=booking_data.client_id,
+#         worker_id=booking_data.worker_id,
+#         appointment_datetime=booking_data.appointment_datetime,
+#         service_feature_id=booking_data.service_feature_id,
+#         location=booking_data.location,
+#         description=booking_data.description,
+#         total_price=booking_data.total_price,
+#         deposit_paid=False,
+#         status=booking_data.status,
+#         rating=booking_data.rating,
+#         # special_requests=booking_data.special_requests,
+#         # preferred_language=booking_data.preferred_language
+
+#     )
+
+#     client_exists = db.query(Client).filter(Client.id == booking_data.client_id).first()
+#     if not client_exists:
+#         raise HTTPException(status_code=404, detail="Client not found")
+#     worker_exists = db.query(Client).filter(Client.id == booking_data.worker_id).first()
+#     if booking_data.worker_id and not worker_exists:
+#         raise HTTPException(status_code=404, detail="Worker not found")
+
+#     db.add(new_booking)
+#     db.commit()  # So we get booking.id
+
+#     # Add booked services
+#     for service in booking_data.booked_services:
+#         # Optional: validate the feature_option exists
+#         option = db.query(FeatureOption).filter(FeatureOption.id == service.feature_option_id).first()
+#         if not option:
+#             raise HTTPException(status_code=404, detail=f"Feature option {service.feature_option_id} not found")
+
+#         booking_service = BookingService(
+#             booking_id=new_booking.id,
+#             feature_option_id=service.feature_option_id,
+#             quantity=service.quantity,
+#             unit_price=service.unit_price,
+#             total_price=service.total_price
+#         )
+#         db.add(booking_service)
+
+#     db.commit()
+
+#     booking_id_exists = db.query(Booking).filter(Booking.id == new_booking.id).first()
+
+#     if worker_exists and booking_id_exists:
+#         notification = Notification(
+#             user_id=worker_exists.user_id,   # IMPORTANT: user_id, not worker_exists.id
+#             title="New Booking Request",
+#             message=(
+#                 f"You have a new booking scheduled for "
+#                 f"{new_booking.appointment_datetime.strftime('%d %b %Y, %I:%M %p')}."
+#             ),
+#             is_read=False,
+#             created_at=datetime.utcnow(),
+#         )
+#         db.add(notification)
+
+
+#         #########initiate eposit payment request here ##########
+#         deposit_payment_intent(booking_id=new_booking.id, db=db)
+
+
+    
+    
+#     db.refresh(new_booking)
+#     return new_booking
+
+
 @booking_router.post("/", response_model=BookingResponse)
-def create_booking(booking_data: BookingCreate, db: Session = Depends(get_db)):
-    # Create the booking
+def create_booking(
+    booking_data: BookingCreate,
+    db: Session = Depends(get_db)
+):
+    # Validate client
+    client = db.query(Client).filter(Client.id == booking_data.client_id).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+
+    # Validate worker
+    worker = db.query(Worker).filter(Worker.id == booking_data.worker_id).first()
+    if not worker:
+        raise HTTPException(404, "Worker not found")
+
+    # Create booking
     new_booking = Booking(
         client_id=booking_data.client_id,
         worker_id=booking_data.worker_id,
@@ -23,59 +110,61 @@ def create_booking(booking_data: BookingCreate, db: Session = Depends(get_db)):
         location=booking_data.location,
         description=booking_data.description,
         total_price=booking_data.total_price,
-        deposit_paid=booking_data.deposit_paid,
-        status=booking_data.status,
-        rating=booking_data.rating,
-        # special_requests=booking_data.special_requests,
-        # preferred_language=booking_data.preferred_language
-
+        deposit_paid=False,
+        status="pending_payment",
     )
 
-    client_exists = db.query(Client).filter(Client.id == booking_data.client_id).first()
-    if not client_exists:
-        raise HTTPException(status_code=404, detail="Client not found")
-    worker_exists = db.query(Client).filter(Client.id == booking_data.worker_id).first()
-    if booking_data.worker_id and not worker_exists:
-        raise HTTPException(status_code=404, detail="Worker not found")
-
     db.add(new_booking)
-    db.commit()  # So we get booking.id
+    db.commit()
+    db.refresh(new_booking)
 
     # Add booked services
     for service in booking_data.booked_services:
-        # Optional: validate the feature_option exists
-        option = db.query(FeatureOption).filter(FeatureOption.id == service.feature_option_id).first()
-        if not option:
-            raise HTTPException(status_code=404, detail=f"Feature option {service.feature_option_id} not found")
+        option = db.query(FeatureOption).filter(
+            FeatureOption.id == service.feature_option_id
+        ).first()
 
-        booking_service = BookingService(
-            booking_id=new_booking.id,
-            feature_option_id=service.feature_option_id,
-            quantity=service.quantity,
-            unit_price=service.unit_price,
-            total_price=service.total_price
+        if not option:
+            raise HTTPException(
+                404, f"Feature option {service.feature_option_id} not found"
+            )
+
+        db.add(
+            BookingService(
+                booking_id=new_booking.id,
+                feature_option_id=service.feature_option_id,
+                quantity=service.quantity,
+                unit_price=service.unit_price,
+                total_price=service.total_price,
+            )
         )
-        db.add(booking_service)
 
     db.commit()
 
-    if worker_exists:
-        notification = Notification(
-            user_id=worker_exists.user_id,   # IMPORTANT: user_id, not worker_exists.id
-            title="New Booking Request",
-            message=(
-                f"You have a new booking scheduled for "
-                f"{new_booking.appointment_datetime.strftime('%d %b %Y, %I:%M %p')}."
-            ),
-            is_read=False,
-            created_at=datetime.utcnow(),
-        )
-        db.add(notification)
+    # Create notification for worker
+    notification = Notification(
+        user_id=worker.user_id,
+        title="New Booking Request",
+        message=(
+            f"You have a new booking scheduled for "
+            f"{new_booking.appointment_datetime.strftime('%d %b %Y, %I:%M %p')}"
+        ),
+        is_read=False,
+        created_at=datetime.utcnow(),
+    )
+    db.add(notification)
+    db.commit()
 
-    
-    
-    db.refresh(new_booking)
-    return new_booking
+    # 🔑 Create Stripe deposit PaymentIntent
+    payment_intent = create_deposit_payment_intent(
+        booking_id=new_booking.id,
+        db=db
+    )
+
+    return {
+        **new_booking.__dict__,
+        "stripe_client_secret": payment_intent.client_secret
+    }
 
 
 @booking_router.get("/", response_model=list[BookingResponse])

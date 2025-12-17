@@ -20,7 +20,7 @@ def test_stripe_payment():
     return stripe_payment_test()
 
 
-@router.post("/payments/create-intent")
+@router.post("/create-intent/{booking_id}", response_model=dict)
 
 def create_deposit_payment_intent(
     booking_id: int,
@@ -59,3 +59,37 @@ def create_deposit_payment_intent(
     return {
         "clientSecret": intent.client_secret
     }
+
+
+# @router.post("/webhooks/stripe")
+# async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+#     payload = await request.body()
+#     sig_header = request.headers.get("stripe-signature")
+
+#     event = stripe.Webhook.construct_event(
+#         payload,
+#         sig_header,
+#         settings.STRIPE_WEBHOOK_SECRET
+#     )
+
+#     if event["type"] == "payment_intent.succeeded":
+#         intent = event["data"]["object"]
+
+#         payment = (
+#             db.query(Payment)
+#             .filter(Payment.stripe_payment_intent_id == intent.id)
+#             .first()
+#         )
+
+#         payment.status = "paid"
+
+#         booking = db.query(Booking).get(payment.booking_id)
+
+#         if payment.type == "deposit":
+#             booking.status = "deposit_paid"
+#         else:
+#             booking.status = "completed"
+
+#         db.commit()
+
+#     return {"status": "ok"}
