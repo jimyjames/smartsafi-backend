@@ -131,7 +131,8 @@ def register_client_with_files(
         return str(path)
 
     client.national_id_proof = save_file(national_id_proof, "id")
-    client.tax_document_proof = save_file(tax_document_proof, "tax")
+    if tax_document_proof:
+         client.tax_document_proof = save_file(tax_document_proof, "tax")
     if profile_picture:
         client.profile_picture = save_file(profile_picture, "profile")
 

@@ -76,6 +76,18 @@ class LanguageResponse(LanguageBase):
     class Config:
         orm_mode = True
 
+class BookingBase(BaseModel):
+    client_id: int
+    worker_id: int
+    appointment_datetime: datetime
+    service_feature_id: int
+    total_price: float
+    deposit_paid: float 
+    description:Optional[str] 
+    location: str
+    status: str 
+    rating: Optional[float] 
+
 
 # ==========================
 #  Worker Emergency Contact
@@ -172,7 +184,7 @@ class WorkerRatingBase(BaseModel):
     review: Optional[str] = None
 
 class WorkerRatingCreate(WorkerRatingBase):
-    booking_id: Optional[int] = None
+    booking_id: int 
 
 
 class WorkerReviewStatsResponse(BaseModel):
@@ -181,15 +193,56 @@ class WorkerReviewStatsResponse(BaseModel):
     responseRate: int
     ratingBreakdown: Dict[int, int]
 
-
-class WorkerRatingResponse(WorkerRatingBase):
+class CustomerRatersResponse(BaseModel):
     id: int
-    created_at: datetime
+    first_name: Optional[str]
+    last_name: Optional[str]
+    organization_name: Optional[str]
+    profile_picture: Optional[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
+# class WorkerRatingResponse(WorkerRatingBase):
+#     id: int
+#     created_at: datetime
+#     customer: CustomerRatersResponse
+
+
+#     class Config:
+#         orm_mode = True
+    
+
+#     @classmethod
+#     def from_orm(cls, obj):
+#         # This runs for every rating
+#         rating = super().from_orm(obj)
+#         if obj.booking and obj.booking.client:
+#             rating.customer = CustomerRatersResponse.from_orm(obj.booking.client)
+#         else:
+#             rating.customer = None
+#         return rating
+
+
+class WorkerRatingResponse(WorkerRatingBase, from_attributes=True):
+    id: int
+    created_at: datetime
+    booking_id: int
+    # booking: Optional[BookingB]
+    # customer: CustomerRatersResponse
+    print("Inside WorkerRatingResponse schema", CustomerRatersResponse)
+
+    @classmethod
+    def from_orm(cls, obj):
+        rating = super().from_orm(obj)
+        if obj.booking and obj.booking.client:
+            rating.customer = CustomerRatersResponse.from_orm(obj.booking.client)
+        else:
+            rating.customer = None
+        return rating
+
+        
 # ==========================
 #  Worker Languages
 # ==========================
@@ -381,17 +434,6 @@ class BookingServiceResponse(BookingServiceBase):
     class Config:
         from_attributes = True
 
-class BookingBase(BaseModel):
-    client_id: int
-    worker_id: int
-    appointment_datetime: datetime
-    service_feature_id: int
-    total_price: float
-    deposit_paid: float 
-    description:Optional[str] 
-    location: str
-    status: str 
-    rating: Optional[float] 
 
 class BookingCreate(BookingBase):
     booked_services: Optional[List[BookingServiceCreate]]=[]
@@ -536,4 +578,16 @@ class PaymentWebhookResponse(BaseModel):
 
     class Config:
         orm_mode = True
+class BookingClientOnly(BaseModel):
+    id: int
+    public_id: str
+    client: ClientName
 
+    class Config:
+        from_attributes = True
+
+class WorkerReviewRatingResponse(WorkerRatingResponse):
+    booking: Optional[BookingClientOnly]
+
+    class Config:
+        from_attributes = True

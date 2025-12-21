@@ -2,7 +2,7 @@ import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session,joinedload
 from sqlalchemy import func
-from schemas import  BookingCreate, BookingResponse, BookingRequestCreate,BookingRequestUpdate,BookingRequestResponse,BookingUpdate,BookingBase
+from schemas import  BookingCreate, BookingResponse, BookingRequestCreate,BookingRequestUpdate,BookingRequestResponse,BookingUpdate,BookingBase,WorkerRatingBase
 from models import Booking,Client,FeatureOption,BookingService,ServiceFeature, BookingRequest,Workers, Notification
 from payments.route import lipa_na_mpesa_online,create_deposit_payment_intent
 from payments import deposit_payment_intent
@@ -382,4 +382,26 @@ def get_worker_job_counts( worker_id: int,db: Session = Depends(get_db)):
         counts[status] = count
 
     return counts
+
+
+###### create a review for a completed job ######
+@jobs_router.put("/{booking_id}/review", response_model=BookingResponse)
+def add_review_to_booking(
+    booking_id: int,
+    review_data: WorkerRatingBase,
+    db: Session = Depends(get_db)
+):
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.status != "completed":
+        raise HTTPException(status_code=400, detail="Can only review completed bookings")
+
+    booking.rating = review_data.rating
+    booking.review = review_data.review
+
+    db.commit()
+    db.refresh(booking)
+    return booking
 

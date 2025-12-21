@@ -19,6 +19,7 @@ from notifications.route import get_worker_notifications
 from schemas import (
     NotificationResponse,
     WorkerCreate,
+    WorkerRatingCreate,
     WorkerUpdate,
     WorkerResponse,
     WorkerEmergencyContactCreate,WorkerEquipmentCreate,
@@ -213,13 +214,14 @@ def create_worker(
 
 # ------------------ ADD RATING ------------------
 @router.post("/{worker_id}/ratings")
-def add_rating(worker_id: int, rating: float = Form(...), review: Optional[str] = Form(None),
-               booking_id: Optional[int] = Form(None), db: Session = Depends(get_db)):
+def add_rating(worker_id: int, Workerrating: WorkerRatingCreate, db: Session = Depends(get_db)):
 
     worker = db.query(Workers).filter(Workers.id == worker_id).first()
     if not worker:
         raise HTTPException(status_code=404, detail="Worker not found")
-
+    booking_id = Workerrating.booking_id
+    rating = Workerrating.rating
+    review = Workerrating.review
     new_rating = WorkerRating(
         worker_id=worker.id,
         booking_id=booking_id,
@@ -423,13 +425,22 @@ def delete_worker_equipment(equipment_id: int, db: Session = Depends(get_db)):
     return {"message": "Equipment deleted successfully"}
 
 
-@router.get("/{worker_id}/reviews", response_model=List[WorkerRatingResponse])
-def get_worker_reviews(worker_id: int, db: Session = Depends(get_db)):
-    worker = db.query(Workers).filter(Workers.id == worker_id).first()
-    if not worker:
-        raise HTTPException(status_code=404, detail="Worker not found")
-    reviews= db.query(WorkerRating).filter(WorkerRating.worker_id == worker_id).all()
-    return reviews
+# @router.get("/{worker_id}/reviews", response_model=List[WorkerRatingResponse])
+# def get_worker_reviews(worker_id: int, db: Session = Depends(get_db)):
+#     worker = db.query(Workers).filter(Workers.id == worker_id).first()
+#     if not worker:
+#         raise HTTPException(status_code=404, detail="Worker not found")
+#     reviews= db.query(WorkerRating).filter(WorkerRating.worker_id == worker_id).all()
+#     return reviews
+from sqlalchemy.orm import selectinload
+from schemas import WorkerReviewRatingResponse
+@router.get("/{worker_id}/reviews", response_model=List[WorkerReviewRatingResponse])
+def get_worker_ratings(worker_id: int, db: Session = Depends(get_db)):
+    ratings = db.query(WorkerRating).options(
+        selectinload(WorkerRating.booking).selectinload(Booking.client)
+    ).filter(WorkerRating.worker_id == worker_id).all()
+
+    return ratings
     
 
 @router.get(

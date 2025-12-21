@@ -209,8 +209,8 @@ class WorkerRating(Base):
     review = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    booking = relationship("Booking", back_populates="worker_rating") 
     worker = relationship("Workers", back_populates="ratings")
-    booking = relationship("Booking")
 
 
 class WorkerLanguages(Base):
@@ -329,6 +329,7 @@ class Booking(Base):
     booked_services = relationship("BookingService", back_populates="booking", cascade="all, delete")
     payments = relationship("Payment", back_populates="booking")
     notifications = relationship("Notification", back_populates="booking")
+    worker_rating = relationship("WorkerRating", back_populates="booking")
 
 
 class BookingService(Base):
