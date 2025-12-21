@@ -481,7 +481,7 @@ class ServiceCategoryOut(ServiceCategoryBase):
 class BookingRequestBase(BaseModel):
     client_id: int
     service_feature_id: int
-    appointment_date: datetime
+    appointment_datetime: datetime
     location: str
     description: Optional[str] = None
     pricing: Optional[float] = None
@@ -495,7 +495,7 @@ class BookingRequestCreate(BookingRequestBase):
 
 class BookingRequestUpdate(BaseModel):
     worker_id: Optional[int] = None
-    appointment_date: Optional[datetime] = None
+    appointment_datetime: Optional[datetime] = None
     location: Optional[str] = None
     description: Optional[str] = None
     pricing: Optional[float] = None

@@ -97,7 +97,7 @@ def create_booking(
         raise HTTPException(404, "Client not found")
 
     # Validate worker
-    worker = db.query(Worker).filter(Worker.id == booking_data.worker_id).first()
+    worker = db.query(Workers).filter(Workers.id == booking_data.worker_id).first()
     if not worker:
         raise HTTPException(404, "Worker not found")
 
@@ -150,7 +150,6 @@ def create_booking(
             f"{new_booking.appointment_datetime.strftime('%d %b %Y, %I:%M %p')}"
         ),
         is_read=False,
-        created_at=datetime.utcnow(),
     )
     db.add(notification)
     db.commit()
@@ -163,7 +162,7 @@ def create_booking(
 
     return {
         **new_booking.__dict__,
-        "stripe_client_secret": payment_intent.client_secret
+        "stripe_client_secret": payment_intent
     }
 
 
@@ -186,7 +185,7 @@ def get_bookings(db: Session = Depends(get_db)):
 
 @booking_router.get("/client/{client_id}", response_model=list[BookingResponse])
 def get_bookings_by_client(client_id: int, db: Session = Depends(get_db)):
-    client_exists = db.query(Client).filter(Client.id == client_id).first()
+    client_exists = db.query("   Booking request created successfully",Client).filter(Client.id == client_id).first()
     if not client_exists:
         raise HTTPException(status_code=404, detail="Client not found")
 
@@ -234,11 +233,12 @@ def get_stk_info():
 
 @booking_router.post("/requests/", response_model=BookingRequestResponse)
 def create_booking_request(request: BookingRequestCreate, db: Session = Depends(get_db)):
+    print("Creating booking request with data:", request.dict())
     booking = BookingRequest(**request.dict())
     db.add(booking)
     db.commit()
     db.refresh(booking)
-    return booking
+    return (booking)
 
 
 # # ✅ Get all Booking Requests
