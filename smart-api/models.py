@@ -463,3 +463,54 @@ class FeatureOption(Base):
     max_units = Column(Integer)
 
     feature = relationship("ServiceFeature", back_populates="options")
+
+class WorkerWallet(Base):
+    __tablename__ = "worker_wallets"
+
+    id = Column(Integer, primary_key=True)
+    worker_id = Column(Integer, ForeignKey("workers.id"), unique=True, nullable=False)
+
+    balance = Column(Float, default=0.0)  # cached balance (NOT source of truth)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    worker = relationship("Workers", backref="wallet")
+class LedgerEntryType(enum.Enum):
+    credit = "credit"    # money added to worker
+    debit = "debit"      # money deducted from worker
+class WorkerLedger(Base):
+    __tablename__ = "worker_ledger"
+
+    id = Column(Integer, primary_key=True, index=True)
+    worker_id = Column(Integer, ForeignKey("workers.id"), nullable=False)
+
+    amount = Column(Float, nullable=False)   # always positive
+    entry_type = Column(Enum(LedgerEntryType), nullable=False)
+
+    reason = Column(String, nullable=False)  
+    reference_type = Column(String, nullable=True)  
+    reference_id = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    worker = relationship("Workers", backref="ledger_entries")
+class WorkerLoanStatus(enum.Enum):
+    active = "active"
+    completed = "completed"
+    defaulted = "defaulted"
+class WorkerLoan(Base):
+    __tablename__ = "worker_loans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    worker_id = Column(Integer, ForeignKey("workers.id"), nullable=False)
+
+    principal_amount = Column(Float, nullable=False)
+    remaining_balance = Column(Float, nullable=False)
+
+    interest_rate = Column(Float, default=0.0)
+    repayment_percentage = Column(Float, default=0.2)  # 20% per job
+
+    status = Column(Enum(WorkerLoanStatus), default=WorkerLoanStatus.active)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    worker = relationship("Workers", backref="loans")

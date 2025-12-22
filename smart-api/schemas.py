@@ -591,3 +591,36 @@ class WorkerReviewRatingResponse(WorkerRatingResponse):
 
     class Config:
         from_attributes = True
+
+
+class WorkerPaymentsBase(BaseModel):
+    amount: float
+    payment_method: str
+    paid_by: Optional[str] = None
+    payment_reference: Optional[str] = None
+    reference_number: Optional[str] = None
+    work_done: int   # booking_id
+
+class WorkerPaymentsCreate(WorkerPaymentsBase):
+    pass
+class WorkerPaymentsResponse(WorkerPaymentsBase):
+    id: int
+    payment_date: datetime
+
+
+    class Config:
+        orm_mode = True
+
+
+class EarningsChartItem(BaseModel):
+    day: str
+    earnings: float
+
+
+class EarningsSummaryResponse(BaseModel):
+    total: float
+    thisWeek: float
+    thisMonth: float
+    pending: float
+    lastWeekChange: float
+    lastMonthChange: float

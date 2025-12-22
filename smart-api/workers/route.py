@@ -5,11 +5,12 @@ from sqlalchemy import func
 from uuid import uuid4
 import shutil
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+
 
 from database import get_db
 from models import (
-    Workers, WorkerEmergencyContact, WorkerEquipment,
+    Workers, WorkerEmergencyContact, WorkerEquipment,WorkerPayments,
     WorkerService, WorkerAvailability, WorkerRating, Notification, User, WorkerLanguages,Booking
 )
 
@@ -17,14 +18,16 @@ from bookings.route import get_worker_job_counts,get_worker_bookings
 from notifications.route import get_worker_notifications
 
 from schemas import (
+    EarningsSummaryResponse,
     NotificationResponse,
     WorkerCreate,
     WorkerRatingCreate,
+    WorkerPaymentCreate,
     WorkerUpdate,
     WorkerResponse,
     WorkerEmergencyContactCreate,WorkerEquipmentCreate,
     WorkerRatingResponse,
-    WorkerReviewStatsResponse
+    WorkerReviewStatsResponse,EarningsChartItem,WorkerReviewRatingResponse
 )
 router = APIRouter(prefix="/workers", tags=["workers"])
 
@@ -241,35 +244,6 @@ def add_rating(worker_id: int, Workerrating: WorkerRatingCreate, db: Session = D
 
 
 
-# ==========================
-#  Create Worker
-# ==========================
-# @router.post("/", response_model=WorkerResponse)
-# def create_worker(worker: WorkerCreate, db: Session = Depends(get_db)):
-#     db_worker = Workers(
-#         user_id=worker.user_id,
-#         worker_type=worker.worker_type,
-#         first_name=worker.first_name,
-#         last_name=worker.last_name,
-#         organization_name=worker.organization_name,
-#         phone_number=worker.phone_number,
-#         address=worker.address,
-#         profile_picture=worker.profile_picture,
-#         national_id_number=worker.national_id_number,
-#         national_id_proof=worker.national_id_proof,
-#         good_conduct_number=worker.good_conduct_number,
-#         good_conduct_proof=worker.good_conduct_proof,
-#         good_conduct_issue_date=worker.good_conduct_issue_date,
-#         good_conduct_expiry_date=worker.good_conduct_expiry_date,
-#         mpesa_number=worker.mpesa_number,
-#         bank_name=worker.bank_name,
-#         bank_account_name=worker.bank_account_name,
-#         bank_account_number=worker.bank_account_number,
-#     )
-#     db.add(db_worker)
-#     db.commit()
-#     db.refresh(db_worker)
-#     return db_worker
 
 
 # ==========================
@@ -281,14 +255,7 @@ def list_workers(db: Session = Depends(get_db)):
 
 
 # ==========================
-#  Get Worker by ID
-# ==========================
-# @router.get("/{worker_id}", response_model=WorkerResponse)
-# def get_worker(worker_id: int, db: Session = Depends(get_db)):
-#     worker = db.query(Workers).filter(Workers.id == worker_id).first()
-#     if not worker:
-#         raise HTTPException(status_code=404, detail="Worker not found")
-#     return worker
+
 
 
 # ==========================
@@ -433,8 +400,7 @@ def delete_worker_equipment(equipment_id: int, db: Session = Depends(get_db)):
 #     reviews= db.query(WorkerRating).filter(WorkerRating.worker_id == worker_id).all()
 #     return reviews
 from sqlalchemy.orm import selectinload
-from schemas import WorkerReviewRatingResponse
-@router.get("/{worker_id}/reviews", response_model=List[WorkerReviewRatingResponse])
+@router.get("/{worker_id}/reviews", response_model=List[WorkerRatingResponse])
 def get_worker_ratings(worker_id: int, db: Session = Depends(get_db)):
     ratings = db.query(WorkerRating).options(
         selectinload(WorkerRating.booking).selectinload(Booking.client)
@@ -517,4 +483,195 @@ def get_worker_notifications(worker_id: int, db: Session = Depends(get_db)):
 @router.get("/{worker_id}/notifications/", response_model=List[NotificationResponse])
 def notifications_getter(worker_id: int, db: Session = Depends(get_db)):
     return get_worker_notifications(worker_id, db)
+
+
+####### get my  payments ######
+# @router.get("/{worker_id}/payments")
+# def get_worker_payments(worker_id: int, db: Session = Depends(get_db)):
+#     worker = db.query(Workers).filter(Workers.id == worker_id).first()
+#     if not worker:
+#         raise HTTPException(status_code=404, detail="Worker not found")
+#     # Assuming WorkerWallet and WorkerLedger models exist
+#    worker_payments= db.query(WorkerPayments).filter(WorkerPayments.worker_id == worker_id).all()
+#     return worker_payments
+
+
+######make worker payments
+@router.post("/{worker_id}/payments")
+def make_worker_payment(worker_id: int, payment: WorkerPaymentCreate, db: Session = Depends(get_db)):
+    worker = db.query(Workers).filter(Workers.id == worker_id).first()
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    amount = payment.amount
+    payment_method = payment.payment_method
+    new_payment = WorkerPayments(
+        worker_id=worker.id,
+        amount=amount,
+        payment_method=payment_method,
+        payment_date=datetime.utcnow(),
+        work_done=payment.work_done
+    )
+    db.add(new_payment)
+    db.commit()
+    db.refresh(new_payment)
+
+    return {"message": "Payment made successfully", "payment_id": new_payment.id}
  
+def get_last_30_days_earnings(db: Session, worker_id: int):
+    start_date = datetime.utcnow() - timedelta(days=30)
+
+    results = (
+        db.query(
+            func.date(WorkerPayments.payment_date).label("day"),
+            func.sum(WorkerPayments.amount).label("earnings")
+        )
+        .filter(
+            WorkerPayments.worker_id == worker_id,
+            WorkerPayments.payment_date >= start_date
+        )
+        .group_by(func.date(WorkerPayments.payment_date))
+        .order_by(func.date(WorkerPayments.payment_date))
+        .all()
+    )
+
+    return results
+def format_chart_data(results):
+    chart_data = []
+
+    for index, row in enumerate(results, start=1):
+        chart_data.append({
+            "day": f"Day {index}",
+            "earnings": float(row.earnings or 0)
+        })
+
+    return chart_data
+@router.get(
+    "/{worker_id}/earnings",
+    response_model=List[EarningsChartItem]
+)
+def worker_earnings_chart(
+    worker_id: int,
+    db: Session = Depends(get_db)
+):
+    results = get_last_30_days_earnings(db, worker_id)
+    return format_chart_data(results)
+
+
+def start_of_week():
+    today = datetime.utcnow()
+    # return today - timedelta(days=today.weekday())
+    return today - timedelta(days=today.weekday()+2)
+
+def start_of_month():
+    today = datetime.utcnow()
+    return today.replace(day=1)
+
+
+
+def total_earnings(db: Session, worker_id: int):
+    return (
+        db.query(func.coalesce(func.sum(WorkerPayments.amount), 0))
+        .filter(WorkerPayments.worker_id == worker_id)
+        .scalar()
+    )
+
+def weekly_earnings(db: Session, worker_id: int):
+    start_this_week = start_of_week()
+    start_last_week = start_this_week - timedelta(days=7)
+
+    this_week = (
+        db.query(func.coalesce(func.sum(WorkerPayments.amount), 0))
+        .filter(
+            WorkerPayments.worker_id == worker_id,
+            WorkerPayments.payment_date >= start_this_week
+        )
+        .scalar()
+    )
+    print("This week earnings:", this_week)
+    print("Start this week:", start_this_week)
+    print("Start last week:", start_last_week)
+
+    last_week = (
+        db.query(func.coalesce(func.sum(WorkerPayments.amount), 0))
+        .filter(
+            WorkerPayments.worker_id == worker_id,
+            WorkerPayments.payment_date >= start_last_week,
+            WorkerPayments.payment_date < start_this_week
+        )
+        .scalar()
+    )
+
+    return this_week, last_week
+
+
+def monthly_earnings(db: Session, worker_id: int):
+    start_this_month = start_of_month()
+    start_last_month = (start_this_month - timedelta(days=1)).replace(day=1)
+
+    this_month = (
+        db.query(func.coalesce(func.sum(WorkerPayments.amount), 0))
+        .filter(
+            WorkerPayments.worker_id == worker_id,
+            WorkerPayments.payment_date >= start_this_month
+        )
+        .scalar()
+    )
+
+    last_month = (
+        db.query(func.coalesce(func.sum(WorkerPayments.amount), 0))
+        .filter(
+            WorkerPayments.worker_id == worker_id,
+            WorkerPayments.payment_date >= start_last_month,
+            WorkerPayments.payment_date < start_this_month
+        )
+        .scalar()
+    )
+
+    return this_month, last_month
+
+
+def pending_earnings(db: Session, worker_id: int):
+    return (
+        db.query(func.coalesce(func.sum(Booking.total_price), 0))
+        .filter(
+            Booking.worker_id == worker_id,
+            Booking.status == "pending"
+        )
+        .scalar()
+    )
+
+
+def percentage_change(current: float, previous: float) -> float:
+    if previous == 0:
+        return 0.0
+    return round(((current - previous) / previous) * 100, 2)
+
+
+
+def build_earnings_summary(db: Session, worker_id: int):
+    total = total_earnings(db, worker_id)
+
+    this_week, last_week = weekly_earnings(db, worker_id)
+    this_month, last_month = monthly_earnings(db, worker_id)
+
+    pending = pending_earnings(db, worker_id)
+
+    return {
+        "total": total,
+        "thisWeek": this_week,
+        "thisMonth": this_month,
+        "pending": pending,
+        "lastWeekChange": percentage_change(this_week, last_week),
+        "lastMonthChange": percentage_change(this_month, last_month),
+    }
+
+
+@router.get(
+    "/{worker_id}/earnings-summary",
+    response_model=EarningsSummaryResponse
+)
+def worker_earnings_summary(
+    worker_id: int,
+    db: Session = Depends(get_db)
+):
+    return build_earnings_summary(db, worker_id)
