@@ -477,6 +477,15 @@ class WorkerWallet(Base):
 class LedgerEntryType(enum.Enum):
     credit = "credit"    # money added to worker
     debit = "debit"      # money deducted from worker
+
+
+class LedgerReasonEnum(str, enum.Enum):
+    job_payment = "job_payment"
+    loan_disbursement = "loan_disbursement"
+    loan_repayment = "loan_repayment"
+    withdrawal = "withdrawal"
+    adjustment = "adjustment"
+
 class WorkerLedger(Base):
     __tablename__ = "worker_ledger"
 
@@ -489,6 +498,7 @@ class WorkerLedger(Base):
     reason = Column(String, nullable=False)  
     reference_type = Column(String, nullable=True)  
     reference_id = Column(Integer, nullable=True)
+
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -506,11 +516,16 @@ class WorkerLoan(Base):
     principal_amount = Column(Float, nullable=False)
     remaining_balance = Column(Float, nullable=False)
 
-    interest_rate = Column(Float, default=0.0)
+    interest_rate = Column(Float, default=0.2)  # 20% interest
     repayment_percentage = Column(Float, default=0.2)  # 20% per job
 
     status = Column(Enum(WorkerLoanStatus), default=WorkerLoanStatus.active)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    due_date = Column(DateTime, nullable=True)
+    approved = Column(Boolean, default=False)
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+
 
     worker = relationship("Workers", backref="loans")

@@ -317,7 +317,7 @@ def get_full_worker(worker_id: int, db: Session = Depends(get_db)):
     return worker
 
 
-## get worker jobs ##
+#### get worker jobs ####
 
 @router.get("/{worker_id}/jobs")
 def grouped_worker_jobs(worker_id: int, db: Session = Depends(get_db)):
@@ -675,3 +675,7 @@ def worker_earnings_summary(
     db: Session = Depends(get_db)
 ):
     return build_earnings_summary(db, worker_id)
+
+
+
+

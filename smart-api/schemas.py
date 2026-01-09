@@ -624,3 +624,30 @@ class EarningsSummaryResponse(BaseModel):
     pending: float
     lastWeekChange: float
     lastMonthChange: float
+
+
+# schemas/message.py
+
+
+class MessageCreate(BaseModel):
+    booking_id: int
+    content: str
+    sender_type: str      # add this for testing
+    receiver_type: str    # add this for testing
+
+class MarkReadRequest(BaseModel):
+    message_id:int
+    reader_type: str
+
+
+class MessageResponse(BaseModel):
+    id: int
+    sender_id: int
+    receiver_id: int
+    booking_id: int
+    content: str
+    sent_at: datetime
+    is_read: bool
+
+    class Config:
+        from_attributes = True

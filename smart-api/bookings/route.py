@@ -8,9 +8,8 @@ from payments.route import lipa_na_mpesa_online,create_deposit_payment_intent
 from payments import deposit_payment_intent
 from database import get_db
 from typing import List, Optional
+from  . import jobs_router,booking_router
 
-booking_router = APIRouter(prefix="/bookings", tags=["bookings"]) 
-jobs_router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 # @booking_router.post("/", response_model=BookingResponse)
@@ -111,7 +110,7 @@ def create_booking(
         description=booking_data.description,
         total_price=booking_data.total_price,
         deposit_paid=False,
-        status="pending_payment",
+        status="pending",
     )
 
     db.add(new_booking)
@@ -347,11 +346,14 @@ def get_worker_bookings(worker_id: int, db: Session = Depends(get_db)):
         joinedload(Booking.worker),
         joinedload(Booking.booked_services).joinedload(BookingService.feature_option)
     ).filter(Booking.worker_id == worker_id).all()
-
+    if not bookings:
+        raise HTTPException(status_code=404, detail="No bookings found for this worker")
+    print("Fetched bookings:", bookings)
     # 3. Group the bookings by status
     grouped = {
-        "pending": [],
-        "accepted": [],
+        "pending_payment": [],
+        "pending":[],
+        "confirmed": [],
         "in_progress": [],
         "completed": [],
         "cancelled": []
@@ -370,8 +372,9 @@ def get_worker_job_counts( worker_id: int,db: Session = Depends(get_db)):
 
     # default values
     counts = {
-        "pending": 0,
-        "accepted": 0,
+        "pending_payment": 0,
+        "pending": 0,   
+        "confirmed": 0,
         "in_progress": 0,
         "completed": 0,
         "cancelled": 0,
