@@ -651,3 +651,28 @@ class MessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class MessageItem(BaseModel):
+    id: int
+    sender: str  # "client" or "provider"
+    text: str
+    timestamp: str
+    read: bool
+
+class UserSummary(BaseModel):
+    name: str
+    profilePicture: str | None
+    rating: float | None
+    status: str  # "online" or "last seen X mins ago"
+
+class ConversationResponse(BaseModel):
+    bookingId: int
+    client: UserSummary
+    provider: UserSummary
+    lastMessage: str | None
+    timestamp: str | None
+    unread: int
+    messages: List[MessageItem]
+
+    class Config:
+        orm_mode = True
