@@ -628,16 +628,27 @@ class EarningsSummaryResponse(BaseModel):
 
 # schemas/message.py
 
+class SendMessageRequest(BaseModel):
+    booking_id: int
+    sender_id: int
+    receiver_id: int
+    content: str
+
+
 
 class MessageCreate(BaseModel):
     booking_id: int
     content: str
     sender_type: str      # add this for testing
     receiver_type: str    # add this for testing
+    # Add this field for user_id
+    user_id: Optional[int] = None  # For backward compatibility
 
 class MarkReadRequest(BaseModel):
-    message_id:int
-    reader_type: str
+    message_id: int
+    # Add this field for user_id
+    user_id: Optional[int] = None  # For backward compatibility
+
 
 
 class MessageResponse(BaseModel):

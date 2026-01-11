@@ -19,6 +19,11 @@ class User(Base):
     )
     is_admin = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
+    is_online = Column(Boolean, default=False)
+    last_seen = Column(DateTime, nullable=True)
+    fcm_token = Column(String, nullable=True)
+    
+
 
     client = relationship("Client", back_populates="user", uselist=False)
     worker = relationship("Workers", back_populates="user", uselist=False)
@@ -417,10 +422,13 @@ class Message(Base):
     content = Column(Text, nullable=False)
     sent_at = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
+    delivered_at = Column(DateTime,nullable=True)
+    read_at = Column(DateTime, nullable=True)
 
     sender = relationship("User", foreign_keys=[sender_id])
     receiver = relationship("User", foreign_keys=[receiver_id])
     booking = relationship("Booking", backref="messages")
+
 
 
 class ServiceCategory(Base):
