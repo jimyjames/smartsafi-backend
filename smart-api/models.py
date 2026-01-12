@@ -1,6 +1,7 @@
 
 from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Enum, DateTime, Float, UniqueConstraint
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSON
 import enum
 from uuid import uuid4
 from database import Base
@@ -8,6 +9,14 @@ from datetime import datetime
 
 
 
+class UserRoleEnum(str, enum.Enum):
+    client = "client"
+    worker = "worker"
+    admin = "admin"
+    hr = "hr"
+    manager = "manager"
+    support = "support"
+    finance = "finance"
 class User(Base):
     __tablename__ = "users"
 
@@ -17,6 +26,7 @@ class User(Base):
     public_user_id = Column(
         String(100), unique=True, default=lambda: "USR" + str(uuid4())
     )
+    role=Column(String, nullable=False, default=UserRoleEnum.client.value)
     is_admin = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
     is_online = Column(Boolean, default=False)
@@ -28,7 +38,26 @@ class User(Base):
     client = relationship("Client", back_populates="user", uselist=False)
     worker = relationship("Workers", back_populates="user", uselist=False)
     notifications = relationship("Notification", back_populates="user")
+    admin_profile = relationship("AdminProfile", back_populates="user", uselist=False, cascade="all, delete")
 
+class AdminProfile(Base):
+    __tablename__ = "admin_profiles"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
+    profile_picture = Column(String, nullable=True)
+    date_of_birth = Column(DateTime, nullable=True)
+    department = Column(String, nullable=True)
+    permissions = Column(JSON, default=dict)  # Store as JSON dict
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    address = Column(Text, nullable=True)
+    
+    
+    user = relationship("User", back_populates="admin_profile")
 
 class ClientTypeEnum(str, enum.Enum):
     individual = "individual"

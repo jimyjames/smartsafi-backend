@@ -59,6 +59,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
+        role: str = payload.get("role")
         if email is None:
             raise credentials_exception
     except JWTError:
@@ -66,6 +67,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     user = db.query(User).filter(User.email == email).first()
     if user is None:
+        raise credentials_exception
+    if user.role != role:
         raise credentials_exception
     return user   
 
@@ -76,3 +79,39 @@ def token_required(func):
     async def wrapper(*args, current_user: User = Depends(get_current_user), **kwargs):
         return await func(*args, current_user=current_user, **kwargs)
     return wrapper
+
+### roles      ###
+def require_role(required_role: str):
+    def role_checker(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ):
+        if current_user.role != required_role and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires {required_role} role"
+            )
+        return current_user
+    return role_checker
+
+def require_any_role(allowed_roles: list):
+    def role_checker(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ):
+        if current_user.role not in allowed_roles and not current_user.is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires one of these roles: {', '.join(allowed_roles)}"
+            )
+        return current_user
+    return role_checker
+
+# Specific role checkers
+require_admin = require_role("admin")
+require_hr = require_role("hr")
+require_worker = require_role("worker")
+require_client = require_role("client")
+
+# For multiple roles
+require_staff = require_any_role(["admin", "hr", "manager", "support"])

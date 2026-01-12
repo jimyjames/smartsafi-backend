@@ -1,3 +1,4 @@
+import datetime
 from fastapi import FastAPI
 from database import  engine
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,10 +20,15 @@ from wallet.route import router as wallet_router
 from messages.route import router as messages_router
 # from admin import router as admin_router
 from admin.route import router as admin_router
+from admin.hr_admin import router as hr_admin_router
 # Create DB tables
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(
+    title="Smart Safi API",
+    description="API for Smart Safi Application",
+    version="1.0.0",
+)
 
 
 app.add_middleware(
@@ -52,3 +58,22 @@ app.include_router(notifications_router)
 app.include_router(wallet_router)
 app.include_router(admin_router)
 app.include_router(messages_router)
+app.include_router(hr_admin_router)
+
+@app.get("/")
+def root():
+    return {
+        "message": "Service Platform API",
+        "version": "1.0.0",
+        "endpoints": {
+            "auth": "/auth",
+            "admin": "/admin",
+            "hr": "/hr",
+            "workers": "/workers",
+            "clients": "/clients"
+        }
+    }
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.utcnow()}

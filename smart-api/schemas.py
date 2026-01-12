@@ -1,14 +1,131 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator,Field
 from enum import Enum
-from typing import Optional, List,Dict,Literal
+from typing import Optional, List,Dict,Literal,Any
 from pydantic import BaseModel, field_validator,EmailStr
 from datetime import datetime
 from uuid import uuid4
 from fastapi import Form, UploadFile, File
 
+## enums for user role ###
+
+class UserRoleEnum(str, Enum):
+    client = "client"
+    worker = "worker"
+    admin = "admin"
+    hr = "hr"
+    manager = "manager"
+    support = "support"
+    finance = "finance"
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    role: Optional[UserRoleEnum] = "client"
+    # role: Optional[str] = "client"
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    role: str
+    is_verified: bool
+    is_admin: bool
+    public_user_id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+
+# Admin schemas
+class AdminDashboardStats(BaseModel):
+    total_users: int
+    users_today: int
+    users_by_role: Dict[str, int]
+    total_clients: int
+    verified_clients: int
+    total_workers: int
+    verified_workers: int
+    pending_verification: int
+    total_bookings: int
+    bookings_today: int
+    pending_bookings: int
+    completed_bookings: int
+    total_revenue: float
+    revenue_today: float
+    recent_users: List[Any]
+    recent_bookings: List[Any]
+
+class UserManagementResponse(BaseModel):
+    id: int
+    email: str
+    role: str
+    is_verified: bool
+    is_admin: bool
+    public_user_id: str
+    created_at: datetime
+    last_seen: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+class AdminProfileCreate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    department: Optional[str] = None
+    permissions: Optional[Dict[str, bool]] = None
+
+class AdminProfileResponse(BaseModel):
+    id: int
+    user_id: int
+    first_name: Optional[str]
+    last_name: Optional[str]
+    phone_number: Optional[str]
+    department: Optional[str]
+    permissions: Dict[str, bool]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# HR schemas
+class WorkerVerificationRequest(BaseModel):
+    approve: bool = True
+    verify_good_conduct: bool = False
+    verify_company_reg: bool = False
+    rejection_reason: Optional[str] = None
+
+class WorkerPerformanceResponse(BaseModel):
+    worker_id: int
+    name: str
+    email: str
+    phone: str
+    average_rating: float
+    jobs_completed: int
+    completion_rate: float
+    verification_status: bool
+    recent_ratings: List[Any]
+
+class HRDashboardStats(BaseModel):
+    total_workers: int
+    active_workers: int
+    pending_verification: int
+    recent_registrations: List[Any]
+    top_performers: List[Any]
+    low_performers: List[Any]
+
+class PayrollSummary(BaseModel):
+    worker_id: int
+    worker_name: str
+    total_amount: float
+    payment_count: int
+    payments: List[Any]
+
+class BookingAnalytics(BaseModel):
+    bookings_by_period: List[Dict[str, Any]]
+    status_distribution: Dict[str, int]
+
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -23,6 +140,8 @@ class Token(BaseModel):
 # class ClientType(str, Enum):
 #     individual = "individual"
 #     organization = "organization"
+
+
 
 
 
