@@ -21,6 +21,7 @@ from messages.route import router as messages_router
 # from admin import router as admin_router
 from admin.route import router as admin_router
 from admin.hr_admin import router as hr_admin_router
+from admin.admin_payments import router as admin_payments_router
 # Create DB tables
 models.Base.metadata.create_all(bind=engine)
 
@@ -59,6 +60,7 @@ app.include_router(wallet_router)
 app.include_router(admin_router)
 app.include_router(messages_router)
 app.include_router(hr_admin_router)
+app.include_router(admin_payments_router)
 
 @app.get("/")
 def root():

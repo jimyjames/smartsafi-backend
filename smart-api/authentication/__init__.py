@@ -57,19 +57,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        print("Decoding token:", token)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
+        email: str = payload.get("email")
         role: str = payload.get("role")
         if email is None:
+            print("Email not found in token")
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
     user = db.query(User).filter(User.email == email).first()
     if user is None:
+        print("User not found")
         raise credentials_exception
     if user.role != role:
+        print("role mismatch")
         raise credentials_exception
+    print("Authenticated user:", user.email, "with role:", user.role)
     return user   
 
 

@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+smartsafi-chatapp-firebase-adminsdk-fbsvc-7031570052.json
 *.py[codz]
 *$py.class
 uploads/
@@ -26,6 +27,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+smartsafi-chatapp-firebase-adminsdk-*.json
 MANIFEST
 
 # PyInstaller
@@ -62,6 +64,7 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.db
 
 # Flask stuff:
 instance/

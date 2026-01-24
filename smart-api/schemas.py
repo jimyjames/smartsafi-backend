@@ -56,6 +56,143 @@ class AdminDashboardStats(BaseModel):
     recent_users: List[Any]
     recent_bookings: List[Any]
 
+    
+class AdminRegister(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+    phone_number: str
+    department: Optional[str] = "Administration"
+
+# schemas.py - Add these schemas
+class AdminProfileCreate(BaseModel):
+    first_name: str
+    last_name: str
+    phone_number: str
+    date_of_birth: Optional[datetime] = None
+    address: Optional[str] = None
+    employee_id: Optional[str] = None
+    department: str = "Administration"
+    employment_date: Optional[datetime] = None
+    salary: Optional[float] = None
+    bank_name: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_branch: Optional[str] = None
+    mpesa_number: Optional[str] = None
+  
+
+class AdminProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    date_of_birth: Optional[datetime] = None
+    address: Optional[str] = None
+    department: Optional[str] = None
+    salary: Optional[float] = None
+    bank_name: Optional[str] = None
+    bank_account_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_branch: Optional[str] = None
+    mpesa_number: Optional[str] = None
+   
+
+class AdminProfileResponse(BaseModel):
+    id: int
+    user_id: int
+    first_name: str
+    last_name: str
+    phone_number: str
+    profile_picture: Optional[str] = None
+    department: str
+    salary: Optional[float] = None
+    bank_name: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    mpesa_number: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class AdminProfileComplete(AdminProfileResponse):
+    date_of_birth: Optional[datetime] = None
+    address: Optional[str] = None
+    employment_type: str
+    bank_account_name: Optional[str] = None
+    bank_branch: Optional[str] = None
+    
+    permissions: Dict[str, Any]
+    access_level: str
+    user: Optional[Any] = None
+
+class AdminPaymentCreate(BaseModel):
+    admin_id: int
+    amount: float
+    payment_type: str
+    payment_method: str
+    payment_period_start: Optional[datetime] = None
+    payment_period_end: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class AdminPaymentResponse(BaseModel):
+    id: int
+    admin_id: int
+    amount: float
+    currency: str
+    payment_type: str
+    payment_method: str
+    payment_reference: Optional[str] = None
+    payment_date: Optional[datetime] = None
+    payment_period_start: Optional[datetime] = None
+    payment_period_end: Optional[datetime] = None
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    admin_profile: Optional[Any] = None
+    
+    class Config:
+        from_attributes = True
+
+class AdminPaymentSummary(BaseModel):
+    total_payments: int
+    total_amount: float
+    pending_amount: float
+    completed_amount: float
+    average_payment: float
+
+class AdminEarningsResponse(BaseModel):
+    admin_id: int
+    admin_name: str
+    total_earnings: float
+    current_month_total: float
+    last_month_total: float
+    percentage_change: float
+    breakdown: Dict[str, float]
+    salary: Optional[float] = None
+    payment_count: int
+
+class UserManagementResponse(BaseModel):
+    id: int
+    email: str
+    role: str
+    last_seen: Optional[datetime]
+
+
+class PaginatedUsersResponse(BaseModel):
+    users: List[UserManagementResponse]
+    total: int
+    page: int
+    limit: int
+    pages: int
+
+class BankDetailsResponse(BaseModel):
+    bank_name: str
+    account_name: str
+    account_number: str
+    branch: Optional[str] = None
+    mpesa_number: Optional[str] = None
 class UserManagementResponse(BaseModel):
     id: int
     email: str

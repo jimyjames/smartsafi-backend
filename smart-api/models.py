@@ -53,11 +53,52 @@ class AdminProfile(Base):
     department = Column(String, nullable=True)
     permissions = Column(JSON, default=dict)  # Store as JSON dict
     created_at = Column(DateTime, default=datetime.utcnow)
-
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     address = Column(Text, nullable=True)
+    salary = Column(Float, nullable=True)   
+    bank_name = Column(String, nullable=True)
+    bank_account_name = Column(String, nullable=True)
+    bank_account_number = Column(String, nullable=True)
+    bank_branch = Column(String, nullable=True)
+    mpesa_number = Column(String, nullable=True)
     
     
     user = relationship("User", back_populates="admin_profile")
+
+
+class AdminPayment(Base):
+    __tablename__ = "admin_payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("admin_profiles.id"), nullable=False)
+    
+    # Payment Details
+    amount = Column(Float, nullable=False)
+    currency = Column(String, default="KES")
+    payment_type = Column(String, nullable=False)  # salary, bonus, commission, allowance
+    payment_method = Column(String, nullable=False)  # bank_transfer, mpesa, cash
+    payment_reference = Column(String, unique=True, nullable=True)
+    
+    # Bank/MPESA Details (if applicable)
+    bank_name = Column(String, nullable=True)
+    bank_account_number = Column(String, nullable=True)
+    mpesa_transaction_id = Column(String, nullable=True)
+    
+    # Period
+    payment_period_start = Column(DateTime, nullable=True)
+    payment_period_end = Column(DateTime, nullable=True)
+    
+    # Status
+    status = Column(String, default="pending")  # pending, processing, completed, failed
+    notes = Column(Text, nullable=True)
+    
+    # Timestamps
+    payment_date = Column(DateTime, nullable=True)
+    processed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    admin_profile = relationship("AdminProfile", backref="payments")
 
 class ClientTypeEnum(str, enum.Enum):
     individual = "individual"
