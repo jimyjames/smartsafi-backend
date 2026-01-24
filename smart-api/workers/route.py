@@ -677,5 +677,89 @@ def worker_earnings_summary(
     return build_earnings_summary(db, worker_id)
 
 
+@router.get("/admin/all")
+def list_cleaners_analytics(db: Session = Depends(get_db)):
+    workers = (
+        db.query(Workers)
+        .options(
+            joinedload(Workers.user),
+            joinedload(Workers.availabilities),
+            joinedload(Workers.ratings),
+            joinedload(Workers.assigned_bookings)
+        )
+        .all()
+    )
+
+    response = []
+
+    for worker in workers:
+        bookings = worker.assigned_bookings or []
+
+        total_jobs = len(bookings)
+
+        # Average rating (DB truth)
+        rating = (
+            sum(r.rating for r in worker.ratings) / len(worker.ratings)
+            if worker.ratings else 0
+        )
+
+        # Status (derived, not hardcoded)
+        status = "active" if total_jobs > 0 else "inactive"
+
+        # Vetting (derived from documents)
+        id_verified = bool(worker.national_id_front and worker.national_id_back)
+        background_check = bool(worker.good_conduct_proof)
+
+        if id_verified and background_check:
+            vetting_status = "verified"
+        else:
+            vetting_status = "pending"
+
+        response.append({
+            "id": worker.public_id,
+            "name": (
+                f"{worker.first_name} {worker.last_name}"
+                if worker.worker_type == "individual"
+                else worker.organization_name
+            ),
+            "email": worker.user.email if worker.user else None,
+            "phone": worker.phone_number,
+            "location": worker.address,
+
+            "rating": round(rating, 1),
+            "totalJobs": total_jobs,
+            "status": status,
+
+            # Vetting
+            "vettingStatus": vetting_status,
+            "idVerified": id_verified,
+            "backgroundCheck": background_check,
+
+            # Dates
+            "joinedAt": (
+                worker.created_at.isoformat()
+                if hasattr(worker, "created_at") and worker.created_at
+                else None
+            ),
+
+            # Onboarding (NOT IN DB)
+            "onboardingStatus": None,
+            "onboardingStep": None,
+            "appliedDate": None,
+
+            # Availability
+            "availability": [
+                {
+                    "day_of_week": a.day_of_week,
+                    "start_time": getattr(a, "start_time", None),
+                    "end_time": getattr(a, "end_time", None),
+                }
+                for a in worker.availabilities
+            ],
+        })
+
+    return response
+
+
 
 

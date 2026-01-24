@@ -692,7 +692,7 @@ class BookingServiceResponse(BookingServiceBase):
 
 
 class BookingCreate(BookingBase):
-    booked_services: Optional[List[BookingServiceCreate]]=[]
+    booked_services: Optional[List[BookingServiceResponse]]=[]
 
 
 class BookingUpdate(BaseModel):

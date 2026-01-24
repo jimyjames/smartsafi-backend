@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, status,APIRouter, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
+from sqlalchemy import func
+from datetime import datetime
 from schemas import ClientCreate, ClientOut, ClientBase
-from models import Client,User  
+from models import Client,User,Booking,Payment,Workers,ServiceFeature
 from database import SessionLocal, get_db  
 from pathlib import Path
 import shutil
@@ -16,53 +18,7 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# @router.post("/", response_model=ClientOut)
-# def create_client(client: ClientCreate, db: Session = Depends(get_db)):
-#     user_exists = db.query(User).filter(User.id == client.user_id).first()
-#     if not user_exists:
-#         raise HTTPException(status_code=404, detail="User not found")
-#     existing = db.query(Client).filter(Client.user_id == client.user_id).first()
-#     if existing:
-#         raise HTTPException(status_code=403, detail="Client already exists for this user")
 
-#     db_client = Client(**client.dict())
-#     db.add(db_client)
-#     db.commit()
-#     db.refresh(db_client)
-#     return db_client
-
-
-# @router.post("/{client_id}/upload", response_model=ClientOut)
-# def upload_proof_files(
-#     client_id: int,
-#     national_id_proof: UploadFile = File(...),
-#     tax_document_proof: UploadFile = File(...),
-#     image: UploadFile = File(None),
-#     db: Session = Depends(get_db)
-# ):
-#     client = db.query(Client).filter(Client.client_id == client_id).first()
-#     if not client:
-#         raise HTTPException(status_code=404, detail="Client not found")
-
-#     # Create upload folder
-#     client_folder = UPLOAD_DIR / f"client_{client.user_id}"
-#     client_folder.mkdir(parents=True, exist_ok=True)
-
-#     def save_file(upload: UploadFile, name: str) -> str:
-#         path = client_folder / f"{name}_{upload.filename}"
-#         with open(path, "wb") as f:
-#             shutil.copyfileobj(upload.file, f)
-#         return str(path)
-
-#     # Save files
-#     client.national_id_proof = save_file(national_id_proof, "id")
-#     client.tax_document_proof = save_file(tax_document_proof, "tax")
-#     if image:
-#         client.image_path = save_file(image, "image")
-
-#     db.commit()
-#     db.refresh(client)
-#     return client
 
 @router.post("/", response_model=ClientOut)
 def register_client_with_files(
@@ -171,3 +127,144 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
     db.delete(db_client)
     db.commit()
     return {"message": "Client deleted successfully"}
+
+
+
+@router.get("/admin/")
+def get_clients_analytics(db: Session = Depends(get_db)):
+    clients = (
+        db.query(Client)
+        .options(
+            joinedload(Client.user),
+            joinedload(Client.bookings)
+                .joinedload(Booking.feature),
+            joinedload(Client.bookings)
+                .joinedload(Booking.worker)
+        )
+        .all()
+    )
+
+    result = []
+
+    for client in clients:
+        bookings = client.bookings or []
+
+        completed = [b for b in bookings if b.status == "completed"]
+
+        total_bookings = len(bookings)
+        total_spent = sum(b.total_price for b in completed)
+
+        average_booking_value = (
+            total_spent / len(completed)
+            if completed else None
+        )
+
+        last_booking = (
+            max(b.appointment_datetime for b in bookings)
+            if bookings else None
+        )
+
+        upcoming_bookings = len([
+            b for b in bookings
+            if b.appointment_datetime > datetime.utcnow()
+        ])
+
+        cancellations = len([
+            b for b in bookings if b.status == "cancelled"
+        ])
+
+        cancellation_rate = (
+            (cancellations / total_bookings) * 100
+            if total_bookings else None
+        )
+
+        # Refunds
+        refund_data = (
+            db.query(
+                func.coalesce(func.sum(Payment.amount), 0),
+                func.count(Payment.id)
+            )
+            .filter(
+                Payment.booking_id.in_([b.id for b in bookings]),
+                Payment.type == "refund"
+            )
+            .first()
+        )
+
+        total_refunded, refund_count = refund_data
+
+        # Recent bookings (last 5)
+        recent_bookings = sorted(
+            bookings,
+            key=lambda b: b.appointment_datetime,
+            reverse=True
+        )[:5]
+
+        result.append({
+            "id": client.public_id,
+            "name": (
+                f"{client.first_name} {client.last_name}"
+                if client.first_name else client.organization_name
+            ),
+            "email": client.user.email,
+            "phone": client.phone_number,
+            "location": client.address,
+
+            # Status
+            "status": "active" if total_bookings > 0 else "inactive",
+
+            # Booking analytics
+            "totalBookings": total_bookings,
+            "totalSpent": total_spent,
+            "averageBookingValue": average_booking_value,
+            "lastBookingDate": (
+                last_booking.isoformat() if last_booking else None
+            ),
+            "upcomingBookings": upcoming_bookings,
+            "cancellationRate": cancellation_rate,
+
+            # Financial
+            "outstandingBalance": None,
+            "totalRefunded": total_refunded,
+            "refundCount": refund_count,
+
+            # Preferences (not in DB yet)
+            "preferredContact": None,
+            "language": None,
+            "notificationsEnabled": None,
+            "marketingOptIn": None,
+
+            # Relationship / CRM (not in DB yet)
+            "customerSegment": None,
+            "lifetimeValue": total_spent,
+            "churnRisk": None,
+            "referralCount": None,
+
+            # Favorites (derived, DB-backed)
+            "favoriteServices": list({
+                b.feature.title for b in completed if b.feature
+            }),
+            "preferredProfessionals": list({
+                f"{b.worker.first_name} {b.worker.last_name}"
+                for b in completed if b.worker
+            }),
+
+            # Recent bookings
+            "recentBookings": [
+                {
+                    "id": b.id,
+                    "date": b.appointment_datetime.isoformat(),
+                    "service": b.feature.title if b.feature else None,
+                    "professional": (
+                        f"{b.worker.first_name} {b.worker.last_name}"
+                        if b.worker else None
+                    ),
+                    "amount": b.total_price,
+                    "status": b.status
+                }
+                for b in recent_bookings
+            ]
+        })
+
+    return result
+
